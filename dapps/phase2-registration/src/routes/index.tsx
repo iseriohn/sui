@@ -3,7 +3,6 @@
 
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import OfflineSigner from './offline-signer';
-import SignatureAnalyzer from './signature-analyzer';
 import { Root } from './root';
 
 export const router = createBrowserRouter([
@@ -13,15 +12,11 @@ export const router = createBrowserRouter([
 		children: [
 			{
 				path: '/',
-				element: <Navigate to="offline-signer" replace />,
+				element: <Navigate to="phase2-registration" replace />,
 			},
 			{
-				path: 'offline-signer',
+				path: 'phase2-registration',
 				element: <OfflineSigner />,
-			},
-			{
-				path: 'signature-analyzer',
-				element: <SignatureAnalyzer />,
 			},
 		],
 	},

@@ -12,26 +12,17 @@ import { Terminal } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
+const message = "I register to contribute to Phase2 Ceremony with address ";
+
 export default function OfflineSigner() {
-	const { currentAccount, signTransactionBlock } = useWalletKit();
-	const [tab, setTab] = useState<'transaction' | 'signature'>('transaction');
-	const [bytes, setBytes] = useState('');
-	const { mutate, data, isLoading } = useMutation({
-		mutationKey: ['sign'],
-		mutationFn: async () => {
-			const transactionBlock = TransactionBlock.from(bytes);
-			return signTransactionBlock({ transactionBlock });
-		},
-		onSuccess() {
-			setTab('signature');
-		},
-	});
+	const { currentAccount, signMessage } = useWalletKit();
 
 	return (
 		<div className="flex flex-col gap-4">
 			<h2 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
 				Offline Signer
 			</h2>
+            <p> To register, sign on the message "{message}0x..." </p>
 
 			{!currentAccount && (
 				<Alert>
@@ -43,36 +34,19 @@ export default function OfflineSigner() {
 				</Alert>
 			)}
 
-			<Tabs value={tab} onChange={() => console.log('change')} className="w-full">
-				<TabsList className="w-full">
-					<TabsTrigger className="flex-1" value="transaction" onClick={() => setTab('transaction')}>
-						Transaction
-					</TabsTrigger>
-					<TabsTrigger
-						className="flex-1"
-						value="signature"
-						disabled={!data}
-						onClick={() => setTab('signature')}
-					>
-						Signature
-					</TabsTrigger>
-				</TabsList>
-
-				<TabsContent value="transaction">
+			<Tabs className="w-full">
 					<div className="flex flex-col items-start gap-4">
-						<Textarea value={bytes} onChange={(e) => setBytes(e.target.value)} />
 						<div className="flex gap-4">
 							<ConnectWallet />
-							<Button disabled={!currentAccount || !bytes || isLoading} onClick={() => mutate()}>
-								Sign Transaction
+                            <Button disabled={!currentAccount} onClick={async () => {
+                                var toSign = message + currentAccount["address"];
+                                var sig = await signMessage({message: new TextEncoder().encode(toSign)});
+                                console.log(sig);
+                            }} >
+								Sign Registration Message
 							</Button>
 						</div>
 					</div>
-				</TabsContent>
-
-				<TabsContent value="signature">
-					<div className="border text-mono break-all rounded p-4">{data?.signature}</div>
-				</TabsContent>
 			</Tabs>
 		</div>
 	);
