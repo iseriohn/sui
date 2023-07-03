@@ -45,9 +45,9 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 
 		const Http = new XMLHttpRequest();
 		// const url = 'http://127.0.0.1:49262';
-		const url = 'http://sui-phase2-registration.iseriohn.com';
+		const url = 'http://record.sui-phase2-ceremony.iseriohn.com';
 		Http.open("POST", url);
-		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
+		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8", "Access-Control-Allow-Origin: *");
 		Http.send(msg);
 
 		Http.onreadystatechange = (e) => {
