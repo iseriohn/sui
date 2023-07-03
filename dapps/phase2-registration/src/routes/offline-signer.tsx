@@ -25,12 +25,13 @@ async function generateKey(setEphemeralKey) {
 async function generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration) {
 		var pk = btoa(String.fromCharCode.apply(null, ephemeralKey["publicKey"]));
 		var toSign = message + currentAccount["address"] + " with ephemeral pk " + pk;
+		console.log(toSign);
 		var sig = await signMessage({message: new TextEncoder().encode(toSign)});
 		console.log(sig);
 
 		var registration = {
 			"address": currentAccount["address"], 
-			"pk": pk,
+			"attestation_pk": pk,
 			"sig": sig["signature"]
 		};
 		console.log(registration);
@@ -43,7 +44,8 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		console.log(msg);
 
 		const Http = new XMLHttpRequest();
-		const url='http://127.0.0.1:49262';
+		// const url = 'http://127.0.0.1:49262';
+		const url = 'http://185.209.177.123:46019';
 		Http.open("POST", url);
 		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
 		Http.send(msg);
