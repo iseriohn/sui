@@ -37,8 +37,7 @@
 		"tailwind-merge": "^1.13.2",
 		"tailwindcss-animate": "^1.0.6",
 		"vite-tsconfig-paths": "^4.2.0",
-		"zod": "^3.21.4",
-        "tweetnacl": "^1.0.3"
+		"zod": "^3.21.4"
 	},
 	"devDependencies": {
 		"@mysten/sui.js": "workspace:*",
