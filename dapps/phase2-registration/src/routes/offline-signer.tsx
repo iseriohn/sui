@@ -50,7 +50,9 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		Http.setRequestHeader(
 			"Content-Type", 
 			"application/json; charset=UTF-8", 
-			"Access-Control-Allow-Origin: *"
+			"Access-Control-Allow-Origin: http://record.sui-phase2-ceremony.iseriohn.com", 
+			"Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS",
+			"Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token"
 		);
 		Http.send(msg);
 
