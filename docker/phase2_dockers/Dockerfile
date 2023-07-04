@@ -1,6 +1,6 @@
 # Use a base image with Rust slim
 ARG feature
-FROM ubuntu:latest AS base
+FROM rust:slim AS base
 # Install system dependencies
 RUN apt-get update -y && apt-get upgrade -y && apt-get install -y sudo &&\
     apt-get install -y wget && apt-get install -y nodejs && \
@@ -14,7 +14,8 @@ WORKDIR /Mysten_Trusted_Setup
 RUN echo "Cloning forked kobigurk/phase2-bn254 repository"
 RUN mkdir -p /Mysten_Trusted_Setup/kobi
 RUN git clone -b mysten https://github.com/iseriohn/phase2-bn254.git /kobi
-
+RUN sudo npm install -g snarkjs@0.6.10
+ENV SNARKJS="snarkjs"
 
 ENV URL="http://185.209.177.123:8099"
 ENV PTAUSIZE=20
@@ -29,11 +30,10 @@ ENV POT=pot${PTAUSIZE}
 ENV ENTROPY1=0000000000000000000a558a61ddc8ee4e488d647a747fe4dcc362fe2026c620
 ENV ENTROPY2=0000000000000000000a558a61ddc8ee4e488d647a747fe4dcc362fe2026c620
 ENV BATCH=256
-ENV 1="FE"
-ENV WITNESS="witness${1}.wtns"
+ENV WITNESS="witness${CIRCUIT}.wtns"
 
-ENV R1CS="zklogin${1}.r1cs"
-ENV ZKEY="phase2_${1}"
+ENV R1CS="zklogin${CIRCUIT}.r1cs"
+ENV ZKEY="phase2_${CIRCUIT}"
 
 FROM base AS branch_phase1_setup
 RUN sudo npm install -g yarn
@@ -68,11 +68,9 @@ RUN echo "Verifying imported ptau file, should be fine if it fails"
 RUN $SNARKJS powersoftau verify ${POT}_final.ptau
 
 FROM base AS branch_phase2_setup
-RUN sudo npm install -g snarkjs@0.6.10
-ENV SNARKJS="snarkjs"
-COPY ${POT}_final.ptau .
+RUN wget ${URL}/${POT}_final.ptau
 RUN echo "Downloading the circuit and witness files, of size ~150M for BE"
-RUN wget ${URL}/${R1CS} 
+RUN wget ${URL}/${R1CS}
 RUN echo "Initiating the zkey file for the circuit, for BE may take ~4min(${LOCALCPU}), (${SERVERCPU})"
 RUN $SNARKJS groth16 setup ${R1CS} ${POT}_final.ptau ${ZKEY}_initial.zkey
 RUN echo "Bellman export the zkey file to kobi compatible params, for BE may take ~ (${LOCALCPU}), (${SERVERCPU})"
@@ -80,36 +78,39 @@ RUN $SNARKJS zkey export bellman ${ZKEY}_initial.zkey ${ZKEY}_initial.params
 RUN echo "Making first phase2 contribution by snarkjs (${LOCALCPU}), (${SERVERCPU})"
 
 FROM base AS branch_contribution
-WORKDIR $FOLDER
-COPY ${ZKEY}_initial.params .
+WORKDIR /../kobi/phase2
+COPY phase2_FE_initial.zkey .
+RUN wget ${URL}/${ZKEY}_initial.params
 RUN $SNARKJS zkey bellman contribute bn128 ${ZKEY}_initial.params ${ZKEY}_snarkjs.params -e="random text snarkjs"
-WORKDIR /kobi/phase2
 RUN echo "Verifying single contribution by kobi (${LOCALCPU}), (${SERVERCPU})"
-RUN cargo run --release --bin verify_single_contribution ${ZKEY}_initial.params $FOLDER/${ZKEY}_snarkjs.params
+RUN cargo run --release --bin verify_single_contribution ${ZKEY}_initial.params ${ZKEY}_snarkjs.params
 RUN echo "Making second phase2 contribution by kobi (${LOCALCPU}), (${SERVERCPU})"
-WORKDIR /kobi/phase2
 RUN cargo run --release --bin contribute ${ZKEY}_snarkjs.params ${ZKEY}_kobi.params random_text_kobi
 RUN cargo run --release --bin verify_single_contribution ${ZKEY}_snarkjs.params ${ZKEY}_kobi.params
+
+FROM base AS branch_final_contribution
+WORKDIR /../kobi/phase2
+RUN wget ${URL}/${POT}_final.ptau
+COPY phase2_FE_initial.zkey .
 RUN echo "Making phase2 beacon contribution by kobi (${LOCALCPU}), (${SERVERCPU})"
-#RUN cd $FOLDER/kobi/phase2
 RUN cargo run --release --bin beacon ${ZKEY}_kobi.params ${ENTROPY2} ${BEACONNUM} ${ZKEY}_beacon.params
 RUN cargo run --release --bin verify_single_contribution ${ZKEY}_kobi.params ${ZKEY}_beacon.params
 RUN echo "Bellman import the kobi compatible params to zkey file (${LOCALCPU}), (${SERVERCPU})"
 RUN $SNARKJS zkey import bellman ${ZKEY}_initial.zkey ${ZKEY}_snarkjs.params ${ZKEY}_final.zkey
 RUN echo "Verify the final zkey file in snarkjs (${LOCALCPU}), (${SERVERCPU})"
-RUN $SNARKJS zkey verify ${R1CS} ${POT}_final.ptau ${ZKEY}_final.zkey
+RUN $SNARKJS zkey verify ${R1CS} /${POT}_final.ptau ${ZKEY}_final.zkey
 RUN echo "Exporting verification key from the final zkey file (${LOCALCPU}), (${SERVERCPU})"
-RUN $SNARKJS zkey export verificationkey ${ZKEY}_final.zkey vk_${1}.json
+RUN $SNARKJS zkey export verificationkey ${ZKEY}_final.zkey vk_${CIRCUIT}.json
 
 FROM base AS branch_test
 RUN wget ${URL}/${WITNESS}
 RUN wget ${URL}/${ZKEY}_final.zkey
-RUN wget ${URL}/vk_${1}.json
+RUN wget ${URL}/vk_${CIRCUIT}.json
 
 RUN echo "Generating proof (${LOCALCPU}), (${SERVERCPU})"
-RUN $SNARKJS groth16 prove ${ZKEY}_final.zkey ${WITNESS} proof_${1}.json public_${1}.json
+RUN $SNARKJS groth16 prove ${ZKEY}_final.zkey ${WITNESS} proof_${CIRCUIT}.json public_${CIRCUIT}.json
 RUN echo "Verifying proof (${LOCALCPU}), (${SERVERCPU})"
-RUN $SNARKJS groth16 verify vk_${1}.json public_${1}.json proof_${1}.json
+RUN $SNARKJS groth16 verify vk_${CIRCUIT}.json public_${CIRCUIT}.json proof_${CIRCUIT}.json
 
 FROM branch_${feature} AS final
 RUN echo "Thanks for your contribution!"
