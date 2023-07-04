@@ -50,9 +50,7 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		Http.setRequestHeader(
 			"Content-Type", 
 			"application/json; charset=UTF-8", 
-			"Access-Control-Allow-Origin: *", 
-			"Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS",
-			"Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token"
+			"Access-Control-Allow-Origin: *"
 		);
 		Http.send(msg);
 
