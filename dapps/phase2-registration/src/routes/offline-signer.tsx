@@ -46,6 +46,7 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		const Http = new XMLHttpRequest();
 		// const url = 'http://127.0.0.1:49262';
 		const url = 'http://record.sui-phase2-ceremony.iseriohn.com';
+		Http.open("POST", url);
 		Http.setRequestHeader(
 			"Content-Type", 
 			"application/json; charset=UTF-8", 
@@ -54,7 +55,6 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 			"Access-Control-Allow-Headers: Origin, Content-Type, X-Auth-Token",
 			"Access-Control-Max-Age: 86400"
 		);
-		Http.open("POST", url);
 		Http.send(msg);
 
 		Http.onreadystatechange = (e) => {
