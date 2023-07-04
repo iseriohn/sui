@@ -44,7 +44,7 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		console.log(msg);
 
 		const Http = new XMLHttpRequest();
-		// const url = 'http://127.0.0.1:49262';
+		// const url = 'http://185.209.177.123:49262';
 		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
 		Http.open("POST", url);
 		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
@@ -55,14 +55,16 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 
 		Http.onreadystatechange = (e) => {
 			if(Http.readyState == 4 && Http.status == 200) {
-				var registration = {
-					"address": currentAccount["address"], 
-					"pk": pk,
-					"sk": ephemeralKey["secretKey"],
-					"sig": sig["signature"]
-				};
-				setListRegistration(listRegistration => [...listRegistration, registration]);
 				alert(Http.responseText);
+				if (JSON.parse(Http.responseText)["result"].startsWith("Registered successfully")) {
+					var registration = {
+						"address": currentAccount["address"], 
+						"pk": pk,
+						"sk": ephemeralKey["secretKey"],
+						"sig": sig["signature"]
+					};
+					setListRegistration(listRegistration => [...listRegistration, registration]);
+				}
 			}
 		}
   }
