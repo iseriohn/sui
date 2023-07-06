@@ -28,7 +28,8 @@ ENV ZKEY="phase2_${CIRCUIT}"
 
 WORKDIR /kobi/phase2
 #RUN wget ${URL}/${ZKEY}_${PRE}.params
-COPY ${ZKEY}_${PRE}.params .
+COPY ${ZKEY}_${PRE}.zkey .
+RUN ${SNARKJS} zkey export bellman ${ZKEY}_${PRE}.zkey ${ZKEY}_${PRE}.params
 RUN echo "Making second phase2 contribution by kobi (${LOCALCPU}), (${SERVERCPU})"
 RUN cargo run --release --bin contribute ${ZKEY}_${PRE}.params ${ZKEY}_${CUR}.params ${ENTROPY}
 #RUN cargo run --release --bin verify_single_contribution ${ZKEY}_${PRE}.params ${ZKEY}_${CUR}.params
