@@ -13,6 +13,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import nacl from 'tweetnacl';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import * as snarkjs from './snarkjs.min.js';
 
 const message = "I register to contribute to Phase2 Ceremony with address ";
 
@@ -44,17 +45,17 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		console.log(msg);
 
 		const Http = new XMLHttpRequest();
-		// const url = 'http://185.209.177.123:49262';
+		// const url = 'http://localhost:37681';
 		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
 		Http.open("POST", url);
 		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
 		Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
-		Http.setRequestHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+		Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 		Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
 		Http.send(msg);
 
 		Http.onreadystatechange = (e) => {
-			if(Http.readyState == 4 && Http.status == 200) {
+			if(Http.readyState === 4 && Http.status === 200) {
 				alert(Http.responseText);
 				if (JSON.parse(Http.responseText)["result"].startsWith("Registered successfully")) {
 					var registration = {
@@ -69,6 +70,20 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		}
   }
 
+async function contributeSNARKJS() {
+	var msg = JSON.stringify({
+		jsonrpc: '2.0',
+		method: 'contribute',
+		id: 1
+	});
+
+	const Http = new XMLHttpRequest();
+	// const url = 'http://localhost:37681';
+	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_FE_initial.params";
+	const new_params = "/new.params"
+	console.log(snarkjs);
+	await snarkjs.zKey.bellmanContribute("bn128", pre_params, new_params);
+}
 
 function Registration({registration, index}) {
 	console.log(registration);
@@ -129,6 +144,9 @@ export default function OfflineSigner() {
 							</Button>
                             <Button disabled={!currentAccount || ephemeralKey == null} onClick={async () => await generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration)} >
 								Sign Registration Message
+							</Button>
+							<Button onClick={async () => await contributeSNARKJS()} >
+								Contribute with snarkjs
 							</Button>
 						</div>
 					</div>
