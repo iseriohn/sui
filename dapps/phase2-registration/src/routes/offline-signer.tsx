@@ -13,7 +13,6 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import nacl from 'tweetnacl';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import * as snarkjs from './snarkjs.min.js';
 
 const message = "I register to contribute to Phase2 Ceremony with address ";
 
