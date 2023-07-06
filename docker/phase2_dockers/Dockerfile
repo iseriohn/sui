@@ -22,7 +22,7 @@ ENV PTAUSIZE=20
 ENV BEACONNUM=10
 ENV LOCALCPU="Apple M1 Pro"
 ENV SERVERCPU="MD EPYC 7443P 24-Core Processor"
-ENV CIRCUIT="FE"
+ENV CIRCUIT="BE"
 ENV FOLDER=${pwd}
 ENV CHALLENGE=challenge_0076_reduced_${PTAUSIZE}
 ENV RESPONSE=response_0076_reduced_${PTAUSIZE}
@@ -68,7 +68,8 @@ RUN echo "Verifying imported ptau file, should be fine if it fails"
 RUN $SNARKJS powersoftau verify ${POT}_final.ptau
 
 FROM base AS branch_phase2_setup
-RUN wget ${URL}/${POT}_final.ptau
+#RUN wget ${URL}/${POT}_final.ptau
+RUN cp pot20_final.ptau
 RUN echo "Downloading the circuit and witness files, of size ~150M for BE"
 RUN wget ${URL}/${R1CS}
 RUN echo "Initiating the zkey file for the circuit, for BE may take ~4min(${LOCALCPU}), (${SERVERCPU})"
