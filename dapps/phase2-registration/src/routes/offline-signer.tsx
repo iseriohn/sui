@@ -81,7 +81,8 @@ async function contributeSNARKJS() {
 	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_FE_initial.params";
 	const new_params = "/new.params"
 	console.log(snarkjs);
-	await snarkjs.zKey.bellmanContribute("bn128", pre_params, new_params);
+	const curve = await snarkjs.zKey.getCurveFromName('bn128');
+	await snarkjs.zKey.bellmanContribute(curve, pre_params, new_params);
 }
 
 function Registration({registration, index}) {
