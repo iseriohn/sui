@@ -76,7 +76,23 @@ async function contributeSNARKJS() {
 		id: 1
 	});
 
+	/*
 	const Http = new XMLHttpRequest();
+		// const url = 'http://localhost:37681';
+		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+		Http.open("POST", url);
+		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
+		Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
+		Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+		Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
+		Http.send(msg);
+
+		Http.onreadystatechange = (e) => {
+			if(Http.readyState === 4 && Http.status === 200) {
+				alert(Http.responseText);
+			}
+		}
+*/
 	// const url = 'http://localhost:37681';
 	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_FE_initial.params";
 	const new_params = "/new.params"
