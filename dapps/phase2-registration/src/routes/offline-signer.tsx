@@ -71,7 +71,7 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 		}
   }
 
-async function contributeSNARKJS() {
+async function contributeSNARKJS(circuit) {
 	var msg = JSON.stringify({
 		jsonrpc: '2.0',
 		method: 'contribute',
@@ -97,48 +97,19 @@ async function contributeSNARKJS() {
 */
 	// const url = 'http://localhost:37681';
 	var currentTime = new Date();
-	console.log("starting time:", currentTime.getTime());
-	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_BE_initial.params";
+	currentTime = currentTime.getTime();
+	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_" + circuit + "_initial.params";
 	const new_params = { type: "mem" }
 	const curve = await ffjavascript.buildBn128();
 	console.log("starting");
-	await snarkjs.zKey.bellmanContribute(curve, pre_params, new_params);
+	await snarkjs.zKey.bellmanContribute(curve, pre_params, new_params, "hi");
 	console.log("finishing");
-	var currentTime = new Date();
-	console.log("ending time:", currentTime.getTime());
+	var endingTime = new Date();
+	endingTime = (endingTime.getTime() - currentTime) / 1000.;
+	console.log("elapsed time:", endingTime);
+	var msg = "The time it takes to contribute for the " + circuit + " circuit is " + endingTime.toString() + "s";
+	alert(msg);
 	console.log(new_params);
-}
-
-async function contributeKOBI() {
-	var msg = JSON.stringify({
-		jsonrpc: '2.0',
-		method: 'contribute',
-		id: 1
-	});
-
-	/*
-	const Http = new XMLHttpRequest();
-		// const url = 'http://localhost:37681';
-		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
-		Http.open("POST", url);
-		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
-		Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
-		Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-		Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
-		Http.send(msg);
-
-		Http.onreadystatechange = (e) => {
-			if(Http.readyState === 4 && Http.status === 200) {
-				alert(Http.responseText);
-			}
-		}
-*/
-	// const url = 'http://localhost:37681';
-	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_FE_initial.params";
-	const new_params = "/new.params"
-	console.log(snarkjs);
-	const curve = await snarkjs.zKey.getCurveFromName('bn128');
-	await snarkjs.zKey.bellmanContribute(curve, pre_params, new_params);
 }
 
 function Registration({registration, index}) {
@@ -201,8 +172,11 @@ export default function OfflineSigner() {
                             <Button disabled={!currentAccount || ephemeralKey == null} onClick={async () => await generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration)} >
 								Sign Registration Message
 							</Button>
-							<Button onClick={async () => await contributeSNARKJS()} >
-								Contribute with snarkjs
+							<Button onClick={async () => await contributeSNARKJS("FE")} >
+								Contribute with snarkjs for FE circuit
+							</Button>
+							<Button onClick={async () => await contributeSNARKJS("BE")} >
+								Contribute with snarkjs for BE circuit
 							</Button>
 						</div>
 					</div>
