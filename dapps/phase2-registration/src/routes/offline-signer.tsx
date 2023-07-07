@@ -13,6 +13,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import nacl from 'tweetnacl';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import * as snarkjs from 'snarkjs';
+import * as ffjavascript from 'ffjavascript';
 
 const message = "I register to contribute to Phase2 Ceremony with address ";
 
@@ -70,6 +72,44 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
   }
 
 async function contributeSNARKJS() {
+	var msg = JSON.stringify({
+		jsonrpc: '2.0',
+		method: 'contribute',
+		id: 1
+	});
+
+	/*
+	const Http = new XMLHttpRequest();
+		// const url = 'http://localhost:37681';
+		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+		Http.open("POST", url);
+		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
+		Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
+		Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+		Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
+		Http.send(msg);
+
+		Http.onreadystatechange = (e) => {
+			if(Http.readyState === 4 && Http.status === 200) {
+				alert(Http.responseText);
+			}
+		}
+*/
+	// const url = 'http://localhost:37681';
+	var currentTime = new Date();
+	console.log("starting time:", currentTime.getTime());
+	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_BE_initial.params";
+	const new_params = { type: "mem" }
+	const curve = await ffjavascript.buildBn128();
+	console.log("starting");
+	await snarkjs.zKey.bellmanContribute(curve, pre_params, new_params);
+	console.log("finishing");
+	var currentTime = new Date();
+	console.log("ending time:", currentTime.getTime());
+	console.log(new_params);
+}
+
+async function contributeKOBI() {
 	var msg = JSON.stringify({
 		jsonrpc: '2.0',
 		method: 'contribute',
