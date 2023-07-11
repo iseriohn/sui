@@ -15,6 +15,7 @@ import nacl from 'tweetnacl';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
+import * as fastFile from "fastfile";
 
 const message = "I register to contribute to Phase2 Ceremony with address ";
 
@@ -24,92 +25,116 @@ async function generateKey(setEphemeralKey) {
 	setEphemeralKey(ephemeralKey);
 }
 
+async function httpCall(msg) {
+	console.log("to send query params:", msg);
+	const Http = new XMLHttpRequest();
+	// const url = 'http://localhost:37681';
+	const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+	Http.open("POST", url);
+	Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
+	Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
+	Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+	Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
+	Http.send(msg);
+
+	return Http;
+}
+
 async function generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration) {
-		var pk = btoa(String.fromCharCode.apply(null, ephemeralKey["publicKey"]));
-		var toSign = message + currentAccount["address"] + " with ephemeral pk " + pk;
-		console.log(toSign);
-		var sig = await signMessage({message: new TextEncoder().encode(toSign)});
-		console.log(sig);
+	var pk = btoa(String.fromCharCode.apply(null, ephemeralKey["publicKey"]));
+	var toSign = message + currentAccount["address"] + " with ephemeral pk " + pk;
+	console.log(toSign);
+	var sig = await signMessage({message: new TextEncoder().encode(toSign)});
+	console.log(sig);
 
-		var registration = {
-			"address": currentAccount["address"], 
-			"attestation_pk": pk,
-			"sig": sig["signature"]
-		};
-		console.log(registration);
-		var msg = JSON.stringify({
-			jsonrpc: '2.0',
-			method: 'register',
-			"params": registration,
-			id: 1
-		});
-		console.log(msg);
+	var registration = {
+		"address": currentAccount["address"], 
+		"attestation_pk": pk,
+		"sig": sig["signature"]
+	};
+	console.log(registration);
+	var msg = JSON.stringify({
+		jsonrpc: '2.0',
+		method: 'register',
+		"params": registration,
+		id: 1
+	});
+	console.log(msg);
 
-		const Http = new XMLHttpRequest();
-		// const url = 'http://localhost:37681';
-		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
-		Http.open("POST", url);
-		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
-		Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
-		Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-		Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
-		Http.send(msg);
+	var Http = await httpCall(msg);
+	Http.onreadystatechange = (e) => {
+		if(Http.readyState === 4 && Http.status === 200) {
+			alert(Http.responseText);
+			if (JSON.parse(Http.responseText)["result"].startsWith("Registered successfully")) {
+				var registration = {
+					"address": currentAccount["address"], 
+					"pk": pk,
+					"sk": ephemeralKey["secretKey"],
+					"sig": sig["signature"]
+				};
+				setListRegistration(listRegistration => [...listRegistration, registration]);
+			}
+		}
+	}
+}
 
-		Http.onreadystatechange = (e) => {
-			if(Http.readyState === 4 && Http.status === 200) {
-				alert(Http.responseText);
-				if (JSON.parse(Http.responseText)["result"].startsWith("Registered successfully")) {
-					var registration = {
-						"address": currentAccount["address"], 
-						"pk": pk,
-						"sk": ephemeralKey["secretKey"],
-						"sig": sig["signature"]
-					};
-					setListRegistration(listRegistration => [...listRegistration, registration]);
+async function runSNARKJS(httpResponse, circuit) {
+	const oldParams = { type: "mem" };
+	const fdTo = await fastFile.createOverride(oldParams);
+	fdTo.write(Uint8Array.from(JSON.parse(httpResponse.responseText)["result"][circuit]));
+	await fdTo.close();
+	const newParams = { type: "mem" };
+	const curve = await ffjavascript.buildBn128();
+	const startingTime = (new Date()).getTime();
+	console.log("starting");
+	await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams);
+	console.log("finishing");
+	const endingTime = (new Date()).getTime();
+
+	const elapsedTime = (endingTime - startingTime) / 1000.;
+	const msg = "The time it takes to contribute for the " + circuit + " circuit is " + elapsedTime.toString() + "s";
+	alert(msg);
+
+	const fdFrom = await fastFile.readExisting(newParams);
+	const response = await fdFrom.read(fdFrom.totalSize, 0);
+	fdFrom.close();
+	return [].slice.call(response);
+}
+
+async function contribute(setUserState) {
+	const query = {
+		"address": "hi", 
+	};
+	const msg = JSON.stringify({
+		jsonrpc: '2.0',
+		method: 'dummy',
+		"params": [query],
+		id: 1
+	});
+	const http = await httpCall(msg);
+	http.onreadystatechange = async(e) => {
+		if(http.readyState === 4 && http.status === 200) {
+			setUserState(1);
+			const paramsFE = await runSNARKJS(http, "FE");
+			setUserState(null);
+
+			const response = {
+				"FE": paramsFE,
+			}
+			const msg = JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'contribute',
+				"params": [response],
+				id: 1
+			});
+			const httpRep = await httpCall(msg);
+			httpRep.onreadystatechange = async(e) => {
+				if(httpRep.readyState === 4 && httpRep.status === 200) {
+					alert("Contributed successfully!");
 				}
 			}
 		}
-  }
-
-async function contributeSNARKJS(circuit) {
-	var msg = JSON.stringify({
-		jsonrpc: '2.0',
-		method: 'contribute',
-		id: 1
-	});
-
-	/*
-	const Http = new XMLHttpRequest();
-		// const url = 'http://localhost:37681';
-		const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
-		Http.open("POST", url);
-		Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
-		Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
-		Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-		Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
-		Http.send(msg);
-
-		Http.onreadystatechange = (e) => {
-			if(Http.readyState === 4 && Http.status === 200) {
-				alert(Http.responseText);
-			}
-		}
-*/
-	// const url = 'http://localhost:37681';
-	var currentTime = new Date();
-	currentTime = currentTime.getTime();
-	const pre_params = "https://record.sui-phase2-ceremony.iseriohn.com/phase2_" + circuit + "_initial.params";
-	const new_params = { type: "mem" }
-	const curve = await ffjavascript.buildBn128();
-	console.log("starting");
-	await snarkjs.zKey.bellmanContribute(curve, pre_params, new_params, "hi");
-	console.log("finishing");
-	var endingTime = new Date();
-	endingTime = (endingTime.getTime() - currentTime) / 1000.;
-	console.log("elapsed time:", endingTime);
-	var msg = "The time it takes to contribute for the " + circuit + " circuit is " + endingTime.toString() + "s";
-	alert(msg);
-	console.log(new_params);
+	}
 }
 
 function Registration({registration, index}) {
@@ -143,6 +168,7 @@ function Registration({registration, index}) {
 export default function OfflineSigner() {
 	const { currentAccount, signMessage } = useWalletKit();
 	const [ephemeralKey, setEphemeralKey] = useState(null);
+	const [userState, setUserState] = useState(null);
 	const [listRegistration, setListRegistration] = useState([]);
 	
 	return (
@@ -172,11 +198,8 @@ export default function OfflineSigner() {
                             <Button disabled={!currentAccount || ephemeralKey == null} onClick={async () => await generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration)} >
 								Sign Registration Message
 							</Button>
-							<Button onClick={async () => await contributeSNARKJS("FE")} >
-								Contribute with snarkjs for FE circuit
-							</Button>
-							<Button onClick={async () => await contributeSNARKJS("BE")} >
-								Contribute with snarkjs for BE circuit
+							<Button disabled={!currentAccount || userState != null} onClick={async () => await contribute(setUserState)} >
+								Contribute with snarkjs
 							</Button>
 						</div>
 					</div>
