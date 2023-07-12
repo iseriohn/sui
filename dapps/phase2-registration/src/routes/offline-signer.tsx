@@ -4,9 +4,8 @@
 import { ConnectWallet } from '@/components/connect';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { TransactionBlock } from '@mysten/sui.js';
+import { Tabs } from '@/components/ui/tabs';
+import { toB64, toParsedSignaturePubkeyPair } from '@mysten/sui.js';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -28,8 +27,8 @@ async function generateKey(setEphemeralKey) {
 async function httpCall(msg) {
 	console.log("to send query params:", msg);
 	const Http = new XMLHttpRequest();
-	// const url = 'http://localhost:37681';
-	const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+	const url = 'http://localhost:37681';
+	// const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
 	Http.open("POST", url);
 	Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
 	Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
@@ -38,6 +37,48 @@ async function httpCall(msg) {
 	Http.send(msg);
 
 	return Http;
+}
+
+async function register(currentAccount, signMessage) {
+	var toSign = message + currentAccount["address"];
+	console.log("Message to sign:", toSign);
+	console.log(new TextEncoder().encode(toSign));
+	var sig = await signMessage({message: new TextEncoder().encode(toSign)});
+	console.log(toParsedSignaturePubkeyPair(sig["signature"]));
+	sig = toParsedSignaturePubkeyPair(sig["signature"])[0];
+	console.log(sig);
+
+	console.log(nacl.sign.detached.verify(new TextEncoder().encode(toSign), sig["signature"], currentAccount["publicKey"]));
+	var registration = {
+		"address": currentAccount["address"], 
+		"wallet_pk": toB64(currentAccount["publicKey"]),
+		"sig": toB64(sig["signature"]),
+		"msg": toSign
+	};
+
+	var msg = JSON.stringify({
+		jsonrpc: '2.0',
+		method: 'register',
+		"params": [registration],
+		id: 1
+	});
+	console.log(msg);
+
+	var Http = await httpCall(msg);
+	Http.onreadystatechange = (e) => {
+		if(Http.readyState === 4 && Http.status === 200) {
+			alert(Http.responseText);
+			if (JSON.parse(Http.responseText)["result"].startsWith("Registered successfully")) {
+				var registration = {
+					"address": currentAccount["address"], 
+					"pk": pk,
+					"sk": ephemeralKey["secretKey"],
+					"sig": sig["signature"]
+				};
+				setListRegistration(listRegistration => [...listRegistration, registration]);
+			}
+		}
+	}
 }
 
 async function generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration) {
@@ -103,11 +144,13 @@ async function runSNARKJS(httpResponse, circuit) {
 
 async function contribute(setUserState) {
 	const query = {
-		"address": "hi", 
+		"address": "hi",
+		"sig": "hi",
+		"wallet_pk": "hi",
 	};
 	const msg = JSON.stringify({
 		jsonrpc: '2.0',
-		method: 'dummy',
+		method: 'join_queue',
 		"params": [query],
 		id: 1
 	});
@@ -192,11 +235,11 @@ export default function OfflineSigner() {
 					<div className="flex flex-col items-start gap-4">
 						<div className="flex gap-4">
 							<ConnectWallet />
+                            <Button disabled={!currentAccount} onClick={async () => await register(currentAccount, signMessage)} >
+								Register
+							</Button>
                             <Button onClick={async () => await generateKey(setEphemeralKey)} >
 								Generate Ephemeral Key Pair
-							</Button>
-                            <Button disabled={!currentAccount || ephemeralKey == null} onClick={async () => await generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration)} >
-								Sign Registration Message
 							</Button>
 							<Button disabled={!currentAccount || userState != null} onClick={async () => await contribute(setUserState)} >
 								Contribute with snarkjs
