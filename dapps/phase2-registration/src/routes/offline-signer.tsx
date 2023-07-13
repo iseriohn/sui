@@ -5,7 +5,7 @@ import { ConnectWallet } from '@/components/connect';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
-import { toB64, toParsedSignaturePubkeyPair } from '@mysten/sui.js';
+import { verifyMessage, toB64, toParsedSignaturePubkeyPair } from '@mysten/sui.js';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -40,20 +40,18 @@ async function httpCall(msg) {
 }
 
 async function register(currentAccount, signMessage) {
-	var toSign = message + currentAccount["address"];
+	var toSign = message + currentAccount.address;
 	console.log("Message to sign:", toSign);
 	console.log(new TextEncoder().encode(toSign));
 	var sig = await signMessage({message: new TextEncoder().encode(toSign)});
-	console.log(toParsedSignaturePubkeyPair(sig["signature"]));
-	sig = toParsedSignaturePubkeyPair(sig["signature"])[0];
 	console.log(sig);
 
-	console.log(nacl.sign.detached.verify(new TextEncoder().encode(toSign), sig["signature"], currentAccount["publicKey"]));
+	console.log(verifyMessage(new TextEncoder().encode(toSign), sig.signature, 3));
+
+
 	var registration = {
-		"address": currentAccount["address"], 
-		"wallet_pk": toB64(currentAccount["publicKey"]),
-		"sig": toB64(sig["signature"]),
-		"msg": toSign
+		"address": currentAccount.address, 
+		"sig": sig.signature,
 	};
 
 	var msg = JSON.stringify({
@@ -68,12 +66,11 @@ async function register(currentAccount, signMessage) {
 	Http.onreadystatechange = (e) => {
 		if(Http.readyState === 4 && Http.status === 200) {
 			alert(Http.responseText);
-			if (JSON.parse(Http.responseText)["result"].startsWith("Registered successfully")) {
+			if (JSON.parse(Http.responseText).result.startsWith("Registered successfully")) {
 				var registration = {
-					"address": currentAccount["address"], 
+					"address": currentAccount.address, 
 					"pk": pk,
-					"sk": ephemeralKey["secretKey"],
-					"sig": sig["signature"]
+					"sig": sig.signature
 				};
 				setListRegistration(listRegistration => [...listRegistration, registration]);
 			}
@@ -87,6 +84,7 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
 	console.log(toSign);
 	var sig = await signMessage({message: new TextEncoder().encode(toSign)});
 	console.log(sig);
+
 
 	var registration = {
 		"address": currentAccount["address"], 
