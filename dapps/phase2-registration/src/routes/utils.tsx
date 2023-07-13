@@ -20,3 +20,12 @@ export async function httpCall(msg) {
 
 	return Http;
 }
+
+export async function generateSignature(signMessage, msg) {
+	let bytes = new TextEncoder().encode(msg);
+	let serialized_msg = new Uint8Array(bytes.length + 1);
+	serialized_msg.set([bytes.length], 0);
+	serialized_msg.set(bytes, 1);
+	let sig = await signMessage({message: serialized_msg});
+    return sig;
+}

@@ -8,23 +8,19 @@ import { Tabs } from '@/components/ui/tabs';
 import { verifyMessage, toB64, toParsedSignaturePubkeyPair } from '@mysten/sui.js';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
-import { registrationMsg, httpCall } from './utils';
+import { registrationMsg, httpCall, generateSignature } from './utils';
 
 async function register(currentAccount, signMessage) {
 	var toSign = registrationMsg + currentAccount.address;
-	console.log("Message to sign:", toSign);
-	console.log(new TextEncoder().encode(toSign));
-	var sig = await signMessage({message: new TextEncoder().encode(toSign)});
+    var sig = await generateSignature(signMessage, toSign);
 	console.log(sig);
-
-	console.log(verifyMessage(new TextEncoder().encode(toSign), sig.signature, 3));
 
 	var registration = {
 		"address": currentAccount.address, 
 		"sig": sig.signature,
 	};
 
-	var msg = JSON.stringify({
+    var msg = JSON.stringify({
 		jsonrpc: '2.0',
 		method: 'register',
 		"params": [registration],
