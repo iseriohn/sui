@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 use sui_macros::*;
+use sui_test_transaction_builder::publish_package;
 use sui_types::base_types::{ObjectID, ObjectRef, SequenceNumber};
 use sui_types::effects::TransactionEffectsAPI;
 use sui_types::effects::{TransactionEffects, TransactionEvents};
@@ -10,7 +11,7 @@ use sui_types::execution_status::{ExecutionFailureStatus, ExecutionStatus};
 use sui_types::object::{Object, Owner, OBJECT_START_VERSION};
 use sui_types::transaction::{CallArg, ObjectArg};
 use sui_types::SUI_FRAMEWORK_ADDRESS;
-use test_utils::network::{TestCluster, TestClusterBuilder};
+use test_cluster::{TestCluster, TestClusterBuilder};
 
 #[sim_test]
 async fn fresh_shared_object_initial_version_matches_current() {
@@ -221,5 +222,5 @@ impl TestEnvironment {
 async fn publish_move_package(test_cluster: &TestCluster) -> ObjectRef {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("tests/move_test_code");
-    test_cluster.wallet.publish_package(path).await
+    publish_package(&test_cluster.wallet, path).await
 }

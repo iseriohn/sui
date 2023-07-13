@@ -17,6 +17,7 @@ use sui_types::quorum_driver_types::{
     QuorumDriverEffectsQueueResult, QuorumDriverError, QuorumDriverResponse, QuorumDriverResult,
 };
 use tap::TapFallible;
+use tokio::sync::Semaphore;
 use tokio::time::{sleep_until, Instant};
 
 use tokio::sync::mpsc::{self, Receiver, Sender};
@@ -33,21 +34,21 @@ use mysten_common::sync::notify_read::{NotifyRead, Registration};
 use mysten_metrics::{spawn_monitored_task, GaugeGuard};
 use std::fmt::Write;
 use sui_types::error::{SuiError, SuiResult};
-use sui_types::messages_grpc::PlainTransactionInfoResponse;
-use sui_types::transaction::{VerifiedCertificate, VerifiedTransaction};
+use sui_types::messages_safe_client::PlainTransactionInfoResponse;
+use sui_types::transaction::{Transaction, VerifiedCertificate};
 
 use self::reconfig_observer::ReconfigObserver;
 
 #[cfg(test)]
 mod tests;
 
-const TASK_QUEUE_SIZE: usize = 10000;
+const TASK_QUEUE_SIZE: usize = 2000;
 const EFFECTS_QUEUE_SIZE: usize = 10000;
 const TX_MAX_RETRY_TIMES: u8 = 10;
 
 #[derive(Clone)]
 pub struct QuorumDriverTask {
-    pub transaction: VerifiedTransaction,
+    pub transaction: Transaction,
     pub tx_cert: Option<VerifiedCertificate>,
     pub retry_times: u8,
     pub next_retry_after: Instant,
@@ -71,6 +72,7 @@ pub struct QuorumDriver<A: Clone> {
     notifier: Arc<NotifyRead<TransactionDigest, QuorumDriverResult>>,
     metrics: Arc<QuorumDriverMetrics>,
     max_retry_times: u8,
+    max_retry_delay: Option<Duration>,
 }
 
 impl<A: Clone> QuorumDriver<A> {
@@ -81,6 +83,7 @@ impl<A: Clone> QuorumDriver<A> {
         notifier: Arc<NotifyRead<TransactionDigest, QuorumDriverResult>>,
         metrics: Arc<QuorumDriverMetrics>,
         max_retry_times: u8,
+        max_retry_delay: Option<Duration>,
     ) -> Self {
         Self {
             validators,
@@ -89,6 +92,7 @@ impl<A: Clone> QuorumDriver<A> {
             notifier,
             metrics,
             max_retry_times,
+            max_retry_delay,
         }
     }
 
@@ -124,7 +128,7 @@ impl<A: Clone> QuorumDriver<A> {
     /// Enqueuing happens only after the `next_retry_after`, if not, wait until that instant
     async fn enqueue_again_maybe(
         &self,
-        transaction: VerifiedTransaction,
+        transaction: Transaction,
         tx_cert: Option<VerifiedCertificate>,
         old_retry_times: u8,
     ) -> SuiResult<()> {
@@ -142,8 +146,12 @@ impl<A: Clone> QuorumDriver<A> {
             );
             return Ok(());
         }
-        let next_retry_after =
-            Instant::now() + Duration::from_millis(200 * u64::pow(2, old_retry_times.into()));
+        let mut next_retry_after = Duration::from_millis(200 * u64::pow(2, old_retry_times.into()));
+        if let Some(max_retry_delay) = self.max_retry_delay {
+            next_retry_after = std::cmp::min(next_retry_after, max_retry_delay);
+        }
+        let next_retry_after = Instant::now() + next_retry_after;
+
         sleep_until(next_retry_after).await;
 
         let tx_cert = match tx_cert {
@@ -165,7 +173,7 @@ impl<A: Clone> QuorumDriver<A> {
 
     pub fn notify(
         &self,
-        transaction: &VerifiedTransaction,
+        transaction: &Transaction,
         response: &QuorumDriverResult,
         total_attempts: u8,
     ) {
@@ -202,7 +210,7 @@ where
 {
     pub async fn submit_transaction(
         &self,
-        transaction: VerifiedTransaction,
+        transaction: Transaction,
     ) -> SuiResult<Registration<TransactionDigest, QuorumDriverResult>> {
         let tx_digest = transaction.digest();
         debug!(?tx_digest, "Received transaction execution request.");
@@ -221,10 +229,7 @@ where
 
     // Used when the it is called in a component holding the notifier, and a ticket is
     // already obtained prior to calling this function, for instance, TransactionOrchestrator
-    pub async fn submit_transaction_no_ticket(
-        &self,
-        transaction: VerifiedTransaction,
-    ) -> SuiResult<()> {
+    pub async fn submit_transaction_no_ticket(&self, transaction: Transaction) -> SuiResult<()> {
         let tx_digest = transaction.digest();
         debug!(
             ?tx_digest,
@@ -243,7 +248,7 @@ where
 
     pub(crate) async fn process_transaction(
         &self,
-        transaction: VerifiedTransaction,
+        transaction: Transaction,
     ) -> Result<ProcessTransactionResult, Option<QuorumDriverError>> {
         let auth_agg = self.validators.load();
         let _tx_guard = GaugeGuard::acquire(&auth_agg.metrics.inflight_transactions);
@@ -463,7 +468,7 @@ where
 
         // If we are able to get a certificate right away, we use it and execute the cert;
         // otherwise, we have to re-form a cert and execute it.
-        let verified_transaction = match response {
+        let transaction = match response {
             PlainTransactionInfoResponse::ExecutedWithCert(cert, _, _) => {
                 self.metrics
                     .total_times_conflicting_transaction_already_finalized_when_retrying
@@ -493,16 +498,17 @@ where
                 // We only try it once.
                 return Ok(result.is_ok());
             }
-            PlainTransactionInfoResponse::Signed(signed) => {
-                signed.verify(&self.clone_committee())?.into_unsigned()
-            }
+            PlainTransactionInfoResponse::Signed(signed) => signed
+                .verify(&self.clone_committee())?
+                .into_unsigned()
+                .into_inner(),
             PlainTransactionInfoResponse::ExecutedWithoutCert(transaction, _, _) => transaction,
         };
         // Now ask validators to execute this transaction.
         let result = self
             .validators
             .load()
-            .execute_transaction_block(&verified_transaction)
+            .execute_transaction_block(&transaction)
             .await
             .tap_ok(|_resp| {
                 debug!(
@@ -542,6 +548,7 @@ where
         reconfig_observer: Arc<dyn ReconfigObserver<A> + Sync + Send>,
         metrics: Arc<QuorumDriverMetrics>,
         max_retry_times: u8,
+        max_retry_delay: Option<Duration>,
     ) -> Self {
         let (task_tx, task_rx) = mpsc::channel::<QuorumDriverTask>(TASK_QUEUE_SIZE);
         let (subscriber_tx, subscriber_rx) =
@@ -553,6 +560,7 @@ where
             notifier,
             metrics.clone(),
             max_retry_times,
+            max_retry_delay,
         ));
         let metrics_clone = metrics.clone();
         let processor_handle = {
@@ -584,10 +592,7 @@ where
 
     // Used when the it is called in a component holding the notifier, and a ticket is
     // already obtained prior to calling this function, for instance, TransactionOrchestrator
-    pub async fn submit_transaction_no_ticket(
-        &self,
-        transaction: VerifiedTransaction,
-    ) -> SuiResult<()> {
+    pub async fn submit_transaction_no_ticket(&self, transaction: Transaction) -> SuiResult<()> {
         self.quorum_driver
             .submit_transaction_no_ticket(transaction)
             .await
@@ -595,7 +600,7 @@ where
 
     pub async fn submit_transaction(
         &self,
-        transaction: VerifiedTransaction,
+        transaction: Transaction,
     ) -> SuiResult<Registration<TransactionDigest, QuorumDriverResult>> {
         self.quorum_driver.submit_transaction(transaction).await
     }
@@ -616,6 +621,7 @@ where
             notifier: Arc::new(NotifyRead::new()),
             metrics: self.quorum_driver_metrics.clone(),
             max_retry_times: self.quorum_driver.max_retry_times,
+            max_retry_delay: self.quorum_driver.max_retry_delay,
         });
         let metrics = self.quorum_driver_metrics.clone();
         let processor_handle = {
@@ -736,7 +742,7 @@ where
 
     fn handle_error(
         quorum_driver: Arc<QuorumDriver<A>>,
-        transaction: VerifiedTransaction,
+        transaction: Transaction,
         err: Option<QuorumDriverError>,
         tx_cert: Option<VerifiedCertificate>,
         old_retry_times: u8,
@@ -762,7 +768,13 @@ where
         mut task_receiver: Receiver<QuorumDriverTask>,
         metrics: Arc<QuorumDriverMetrics>,
     ) {
+        let limit = Arc::new(Semaphore::new(TASK_QUEUE_SIZE));
         while let Some(task) = task_receiver.recv().await {
+            // hold semaphore permit until task completes. unwrap ok because we never close
+            // the semaphore in this context.
+            let limit = limit.clone();
+            let permit = limit.acquire_owned().await.unwrap();
+
             // TODO check reconfig process here
 
             debug!(?task, "Dequeued task");
@@ -776,7 +788,10 @@ where
             }
             metrics.current_requests_in_flight.dec();
             let qd = quorum_driver.clone();
-            spawn_monitored_task!(QuorumDriverHandler::process_task(qd, task));
+            spawn_monitored_task!(async move {
+                let _guard = permit;
+                QuorumDriverHandler::process_task(qd, task).await
+            });
         }
     }
 }
@@ -787,6 +802,7 @@ pub struct QuorumDriverHandlerBuilder<A: Clone> {
     notifier: Option<Arc<NotifyRead<TransactionDigest, QuorumDriverResult>>>,
     reconfig_observer: Option<Arc<dyn ReconfigObserver<A> + Sync + Send>>,
     max_retry_times: u8,
+    max_retry_delay: Option<Duration>,
 }
 
 impl<A> QuorumDriverHandlerBuilder<A>
@@ -800,6 +816,7 @@ where
             notifier: None,
             reconfig_observer: None,
             max_retry_times: TX_MAX_RETRY_TIMES,
+            max_retry_delay: None,
         }
     }
 
@@ -825,6 +842,13 @@ where
         self
     }
 
+    /// Used in test with short epoch durations - too long retry delays make it impossible for
+    /// transactions to ever complete when epochs are very short.
+    pub fn with_max_retry_delay(mut self, max_retry_delay: Duration) -> Self {
+        self.max_retry_delay = Some(max_retry_delay);
+        self
+    }
+
     pub fn start(self) -> QuorumDriverHandler<A> {
         QuorumDriverHandler::new(
             self.validators,
@@ -835,6 +859,7 @@ where
                 .expect("Reconfig observer is missing"),
             self.metrics,
             self.max_retry_times,
+            self.max_retry_delay,
         )
     }
 }

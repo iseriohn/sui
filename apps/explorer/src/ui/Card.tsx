@@ -4,7 +4,7 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { type ReactNode } from 'react';
 
-const cardStyles = cva(null, {
+const cardStyles = cva('overflow-hidden', {
 	variants: {
 		bg: {
 			default: 'bg-gray-40',
@@ -24,7 +24,8 @@ const cardStyles = cva(null, {
 			none: '',
 			sm: 'px-5 py-4',
 			md: 'p-5',
-			lg: 'p-6 sm:p-8',
+			lg: 'p-6',
+			lgGraph: 'p-6 pb-4',
 		},
 		border: {
 			gray45: 'border border-gray-45',
