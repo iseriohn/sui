@@ -48,7 +48,6 @@ async function register(currentAccount, signMessage) {
 
 	console.log(verifyMessage(new TextEncoder().encode(toSign), sig.signature, 3));
 
-
 	var registration = {
 		"address": currentAccount.address, 
 		"sig": sig.signature,
@@ -206,7 +205,7 @@ function Registration({registration, index}) {
 	);
 }
 
-export default function OfflineSigner() {
+export default function Contribute() {
 	const { currentAccount, signMessage } = useWalletKit();
 	const [ephemeralKey, setEphemeralKey] = useState(null);
 	const [userState, setUserState] = useState(null);
@@ -215,9 +214,9 @@ export default function OfflineSigner() {
 	return (
 		<div className="flex flex-col gap-4">
 			<h2 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
-				Offline Signer
+				Get in line to contribute
 			</h2>
-            <p> To register, sign on the message "{message}0x... with ephemeral pk ..." </p>
+            <p> To register, sign on the message "{message}0x..." </p>
 
 			{!currentAccount && (
 				<Alert>
@@ -230,26 +229,39 @@ export default function OfflineSigner() {
 			)}
 
 			<Tabs className="w-full">
-					<div className="flex flex-col items-start gap-4">
-						<div className="flex gap-4">
-							<ConnectWallet />
-                            <Button disabled={!currentAccount} onClick={async () => await register(currentAccount, signMessage)} >
-								Register
-							</Button>
-                            <Button onClick={async () => await generateKey(setEphemeralKey)} >
-								Generate Ephemeral Key Pair
-							</Button>
-							<Button disabled={!currentAccount || userState != null} onClick={async () => await contribute(setUserState)} >
-								Contribute with snarkjs
-							</Button>
-						</div>
+				<div className="flex flex-col items-start gap-4">
+					<div className="flex gap-4">
+						<ConnectWallet />
 					</div>
+				</div>
+			</Tabs>
 
-					{<div className="flex flex-col gap-6 mt-6">
-						{listRegistration.map((registration, index) => (
-							<Registration registration={registration} index={index}/>
-						))}
-					</div>}
+			<Tabs className="w-full">
+				<div className="flex flex-col items-start gap-4">
+					<div className="flex gap-4">
+						<Button disabled={!currentAccount || userState != null} onClick={async () => await contribute(setUserState)} >
+							Contribute in browser with snarkjs
+						</Button>
+					</div>
+				</div>
+			</Tabs>
+				
+			<Tabs className="w-full">
+				<div className="flex flex-col items-start gap-4">
+					<div className="flex gap-4">
+						<Button onClick={async () => await generateKey(setEphemeralKey)} >
+							Generate Ephemeral Key Pair
+						</Button>
+					</div>
+				</div>
+			</Tabs>
+
+			<Tabs className="w-full">
+				{<div className="flex flex-col gap-6 mt-6">
+					{listRegistration.map((registration, index) => (
+						<Registration registration={registration} index={index}/>
+					))}
+				</div>}
 			</Tabs>
 		</div>
 	);

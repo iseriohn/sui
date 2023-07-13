@@ -4,14 +4,34 @@
 import { KeyRound } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
+const links = [
+	{ to: '/register', label: 'Register' },
+	{ to: '/contribute', label: 'Contribute' },
+];
+
 export function Header() {
 	return (
 		<div className="border-b px-8 py-4 flex items-center justify-between">
 			<div className="flex items-center gap-2">
 				<KeyRound strokeWidth={2} size={18} className="text-white/80" />
 				<h1 className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-					Phase2 Ceremony Registration
+					Phase2 Ceremony
 				</h1>
+			</div>
+			<div className="flex gap-4">
+				{links.map(({ to, label }) => (
+					<NavLink
+						key={to}
+						to={to}
+						className={({ isActive }) =>
+							isActive
+								? 'text-sm font-semibold transition-colors hover:text-primary'
+								: 'text-sm font-semibold text-muted-foreground transition-colors hover:text-primary'
+						}
+					>
+						{label}
+					</NavLink>
+				))}
 			</div>
 		</div>
 	);

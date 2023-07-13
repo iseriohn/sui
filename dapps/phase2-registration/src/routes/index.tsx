@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import OfflineSigner from './offline-signer';
+import Register from './register';
+import Contribute from './contribute';
 import { Root } from './root';
 
 export const router = createBrowserRouter([
@@ -12,11 +13,15 @@ export const router = createBrowserRouter([
 		children: [
 			{
 				path: '/',
-				element: <Navigate to="phase2-registration" replace />,
+				element: <Navigate to="register" replace />,
 			},
 			{
-				path: 'phase2-registration',
-				element: <OfflineSigner />,
+				path: 'register',
+				element: <Register />,
+			},
+			{
+				path: 'contribute',
+				element: <Contribute />,
 			},
 		],
 	},
