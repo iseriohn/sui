@@ -4,9 +4,10 @@
 import { fromB64, toB64 } from '@mysten/bcs';
 import { blake2b } from '@noble/hashes/blake2b';
 import { bytesToHex } from '@noble/hashes/utils';
-import { normalizeSuiAddress, SUI_ADDRESS_LENGTH } from '../../types/index.js';
-import { bytesEqual, PublicKey, PublicKeyInitData } from '../../cryptography/publickey.js';
+import type { PublicKey, PublicKeyInitData } from '../../cryptography/publickey.js';
+import { bytesEqual } from '../../cryptography/publickey.js';
 import { SIGNATURE_SCHEME_TO_FLAG } from '../../cryptography/signature.js';
+import { SUI_ADDRESS_LENGTH, normalizeSuiAddress } from '../../utils/sui-types.js';
 
 const SECP256K1_PUBLIC_KEY_SIZE = 33;
 
@@ -76,6 +77,18 @@ export class Secp256k1PublicKey implements PublicKey {
 		return normalizeSuiAddress(
 			bytesToHex(blake2b(tmp, { dkLen: 32 })).slice(0, SUI_ADDRESS_LENGTH * 2),
 		);
+	}
+
+	/**
+	 * Return the Sui representation of the public key encoded in
+	 * base-64. A Sui public key is formed by the concatenation
+	 * of the scheme flag with the raw bytes of the public key
+	 */
+	toSuiPublicKey(): string {
+		const suiPublicKey = new Uint8Array(this.data.length + 1);
+		suiPublicKey.set([this.flag()]);
+		suiPublicKey.set(this.data, 1);
+		return toB64(suiPublicKey);
 	}
 
 	/**

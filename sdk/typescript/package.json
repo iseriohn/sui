@@ -2,13 +2,16 @@
 	"name": "@mysten/sui.js",
 	"author": "Mysten Labs <build@mystenlabs.com>",
 	"description": "Sui TypeScript API(Work in Progress)",
-	"version": "0.36.0",
+	"version": "0.37.1",
 	"license": "Apache-2.0",
 	"files": [
-		"builder",
 		"dist",
 		"src",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"builder",
+		"client",
+		"faucet",
+		"keypairs"
 	],
 	"engines": {
 		"node": ">=16"
@@ -42,6 +45,16 @@
 			"source": "./src/keypairs/secp256r1/index.ts",
 			"import": "./dist/esm/keypairs/secp256r1/index.js",
 			"require": "./dist/cjs/keypairs/secp256r1/index.js"
+		},
+		"./faucet": {
+			"source": "./src/faucet/index.ts",
+			"import": "./dist/esm/faucet/index.js",
+			"require": "./dist/cjs/faucet/index.js"
+		},
+		"./client": {
+			"source": "./src/client/index.ts",
+			"import": "./dist/esm/client/index.js",
+			"require": "./dist/cjs/client/index.js"
 		}
 	},
 	"scripts": {
@@ -112,6 +125,7 @@
 		"@scure/bip32": "^1.3.0",
 		"@scure/bip39": "^1.2.0",
 		"@suchipi/femver": "^1.0.0",
+		"events": "^3.3.0",
 		"superstruct": "^1.0.3",
 		"tweetnacl": "^1.0.3"
 	}

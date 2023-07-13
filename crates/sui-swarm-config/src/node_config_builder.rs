@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use sui_config::node::{
     default_enable_index_processing, default_end_of_epoch_broadcast_channel_capacity,
     AuthorityKeyPairWithPath, AuthorityStorePruningConfig, DBCheckpointConfig,
-    ExpensiveSafetyCheckConfig, Genesis, KeyPairWithPath, StateArchiveConfig,
+    ExpensiveSafetyCheckConfig, Genesis, KeyPairWithPath, StateArchiveConfig, StateSnapshotConfig,
     DEFAULT_GRPC_CONCURRENCY_LIMIT,
 };
 use sui_config::p2p::{P2pConfig, SeedPeer};
@@ -142,7 +142,8 @@ impl ValidatorConfigBuilder {
             supported_protocol_versions: self.supported_protocol_versions,
             db_checkpoint_config: Default::default(),
             indirect_objects_threshold: usize::MAX,
-            expensive_safety_check_config: ExpensiveSafetyCheckConfig::new_enable_all(),
+            // By default, expensive checks will be enabled in debug build, but not in release build.
+            expensive_safety_check_config: ExpensiveSafetyCheckConfig::default(),
             name_service_package_address: None,
             name_service_registry_id: None,
             name_service_reverse_registry_id: None,
@@ -151,6 +152,7 @@ impl ValidatorConfigBuilder {
             state_debug_dump_config: Default::default(),
             state_archive_write_config: StateArchiveConfig::default(),
             state_archive_read_config: vec![],
+            state_snapshot_write_config: StateSnapshotConfig::default(),
         }
     }
 
@@ -379,6 +381,7 @@ impl FullnodeConfigBuilder {
             state_debug_dump_config: Default::default(),
             state_archive_write_config: StateArchiveConfig::default(),
             state_archive_read_config: vec![],
+            state_snapshot_write_config: StateSnapshotConfig::default(),
         }
     }
 }
