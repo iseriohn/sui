@@ -15,7 +15,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
 import * as fastFile from "fastfile";
-
 const message = "I register to contribute to Phase2 Ceremony with address ";
 
 async function generateKey(setEphemeralKey) {
@@ -42,11 +41,16 @@ async function httpCall(msg) {
 async function register(currentAccount, signMessage) {
 	var toSign = message + currentAccount.address;
 	console.log("Message to sign:", toSign);
-	console.log(new TextEncoder().encode(toSign));
-	var sig = await signMessage({message: new TextEncoder().encode(toSign)});
-	console.log(sig);
 
-	console.log(verifyMessage(new TextEncoder().encode(toSign), sig.signature, 3));
+	let bytes = new TextEncoder().encode(toSign);
+	// PersonalMessage { message: Vec<u8> } BCS encoding 
+	// requires the length of the message to be prepended to the message. 
+	let serialized_msg = new Uint8Array(bytes.length + 1);
+	serialized_msg.set([bytes.length], 0);
+	serialized_msg.set(bytes, 1);
+	var sig = await signMessage({message: serialized_msg});
+	// console.log(sig);
+	// console.log(verifyMessage(m, sig.signature, 3));
 
 	var registration = {
 		"address": currentAccount.address, 
