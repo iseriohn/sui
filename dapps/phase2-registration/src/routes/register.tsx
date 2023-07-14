@@ -10,12 +10,13 @@ import { Terminal } from 'lucide-react';
 import { registrationMsg, httpCall, generateSignature } from './utils';
 
 async function register(currentAccount, signMessage) {
-	var toSign = registrationMsg + currentAccount.address;
+    var addr = currentAccount.address;
+	var toSign = registrationMsg(addr);
     var sig = await generateSignature(signMessage, toSign);
 	console.log(sig);
 
 	var registration = {
-		"address": currentAccount.address, 
+		"address": addr, 
 		"sig": sig.signature,
 	};
 
@@ -50,7 +51,7 @@ export default function Register() {
 					<Terminal className="h-4 w-4" />
 					<AlertTitle>Wallet Required</AlertTitle>
 					<AlertDescription>
-						Signing a transaction requires you to first connect to a wallet.
+						Registration requires you to first connect to a wallet.
 					</AlertDescription>
 				</Alert>
 			)}

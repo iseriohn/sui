@@ -1,5 +1,12 @@
-export const registrationMsg = "I register to contribute to Phase2 Ceremony with address ";
 export const refreshTime = 5 * 1000; // Refresh every 5 seconds;
+
+export function registrationMsg(addr) {
+    return "I register to contribute to Phase2 Ceremony with address " + addr;
+}
+
+export function joinQueueMsg(addr, pk) {
+    return "I join the contribution queue with address " + addr + " and attestation pk " + pk;
+}
 
 export async function generateKey(setEphemeralKey) {
 	var ephemeralKey = nacl.sign.keyPair();
@@ -27,6 +34,7 @@ export async function generateSignature(signMessage, msg) {
 	let serialized_msg = new Uint8Array(bytes.length + 1);
 	serialized_msg.set([bytes.length], 0);
 	serialized_msg.set(bytes, 1);
+    console.log(serialized_msg);
 	let sig = await signMessage({message: serialized_msg});
     return sig;
 }
