@@ -23,7 +23,7 @@ export async function httpCall(msg) {
     const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
     Http.open("POST", url);
     Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
-    Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com");
+    Http.setRequestHeader("Access-Control-Allow-Origin", "*");
     Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
     Http.send(msg);
