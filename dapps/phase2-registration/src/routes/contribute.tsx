@@ -17,7 +17,7 @@ import * as ffjavascript from 'ffjavascript';
 import * as fastFile from "fastfile";
 import { refreshTime, joinQueueMsg, httpCall, generateSignature } from './utils';
 
-async function runSNARKJS(httpResponse, params, index) {
+async function runSNARKJS(params, index) {
     const oldParams = { type: "mem" };
     const fdTo = await fastFile.createOverride(oldParams);
     fdTo.write(Uint8Array.from(params));
@@ -46,14 +46,11 @@ async function contributeInBrowser(currentAccount, signMessage, setUserState) {
     var toSign = joinQueueMsg(addr, pk);
     console.log(toSign);
     var sig = await generateSignature(signMessage, toSign);
-    console.log(sig);
 
-    console.log(currentAccount);
     const query = {
         "address": addr,
         "sig": sig.signature,
     };
-    console.log(query);
 
     const msg = JSON.stringify({
         jsonrpc: '2.0',
@@ -62,37 +59,57 @@ async function contributeInBrowser(currentAccount, signMessage, setUserState) {
         id: 1
     });
 
-    const http = await httpCall(msg);
-    http.onreadystatechange = async (e) => {
-        if (http.readyState === 4 && http.status === 200) {
-            console.log(http.responseText);
-            setUserState(1);
-            var new_params = [];
-            var index = 0;
-            for (const params of JSON.parse(http.responseText).result.params) {
-                index += 1;
-                new_params.push(await runSNARKJS(http, params, index));
-            }
-
-            setUserState(null);
-
-            const response = {
-                "params": new_params,
-            }
-            const msg = JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'contribute',
-                "params": [response],
-                id: 1
-            });
-            const httpRep = await httpCall(msg);
-            httpRep.onreadystatechange = async (e) => {
-                if (httpRep.readyState === 4 && httpRep.status === 200) {
-                    alert("Contributed successfully!");
+    setUserState(1);
+    var getInQueueId = setInterval( async function() { 
+        const http = await httpCall(msg);
+        http.onreadystatechange = async (e) => {
+            if (http.readyState === 4 && http.status === 200) {
+                console.log(http.responseText);
+                var responseText = JSON.parse(http.responseText);
+                if (responseText.hasOwnProperty("error")) {
+                    console.log(getInQueueId);
+                    clearInterval(getInQueueId);
+                    alert(http.responseText);
+                    setUserState(null);
+                    return;
                 }
-            }
-        }
-    }
+                if (responseText.result.hasOwnProperty("params")) {
+                    clearInterval(getInQueueId);
+                    var new_params = [];
+                    var index = 0;
+                    for (const params of responseText.result.params) {
+                        index += 1;
+                        new_params.push(await runSNARKJS(params, index));
+                    }
+        
+                    const response = {
+                        "address": addr,
+                        "sig": sig.signature,
+                        "params": new_params,
+                    }
+                    const msgContribute = JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'contribute',
+                        "params": [response],
+                        id: 1
+                    });
+                    const httpRep = await httpCall(msgContribute);
+                    httpRep.onreadystatechange = async (e) => {
+                        if (httpRep.readyState === 4 && httpRep.status === 200) {
+                            alert(httpRep.responseText);
+                        }
+                    } 
+                    setUserState(null);
+                    return;
+                }
+                if (responseText.result.startsWith("In queue, ")) {
+                    alert(http.responseText);
+                    return;
+                }
+           }
+        }    
+    }, refreshTime );
+    console.log("getInQueueId:", getInQueueId);
 }
 
 async function generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration) {
@@ -133,9 +150,6 @@ async function generateSig(currentAccount, signMessage, ephemeralKey, setListReg
         }
     }
 }
-
-
-
 
 function Registration({ registration, index }) {
     console.log(registration);
@@ -232,7 +246,7 @@ export default function Contribute() {
                 </div>
             </Tabs>
 
-            <Tabs className="w-full">
+            {/* <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
                         <Button disabled={!currentAccount || userState != null} onClick={async () => await generateKey(setEphemeralKey)} >
@@ -250,7 +264,7 @@ export default function Contribute() {
                         </Button>
                     </div>
                 </div>
-            </Tabs>
+            </Tabs> */}
 
             {userState != null && (
                 <Alert>
@@ -265,13 +279,14 @@ export default function Contribute() {
                 </Alert>
             )}
 
-            <Tabs className="w-full">
+            {/* <Tabs className="w-full">
                 {<div className="flex flex-col gap-6 mt-6">
                     {listRegistration.map((registration, index) => (
                         <Registration registration={registration} index={index} />
                     ))}
                 </div>}
-            </Tabs>
+            </Tabs> */}
+            
         </div>
     );
 }

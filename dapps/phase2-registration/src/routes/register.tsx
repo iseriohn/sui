@@ -26,7 +26,6 @@ async function register(currentAccount, signMessage) {
 		"params": [registration],
 		id: 1
 	});
-	console.log(msg);
 
 	var Http = await httpCall(msg);
 	Http.onreadystatechange = (e) => {
