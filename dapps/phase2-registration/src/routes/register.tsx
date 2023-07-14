@@ -5,7 +5,6 @@ import { ConnectWallet } from '@/components/connect';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
-import { verifyMessage, toB64, toParsedSignaturePubkeyPair } from '@mysten/sui.js';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { registrationMsg, httpCall, generateSignature } from './utils';

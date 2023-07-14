@@ -15,71 +15,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
 import * as fastFile from "fastfile";
-const message = "I register to contribute to Phase2 Ceremony with address ";
+import { refreshTime, httpCall, generateSignature } from './utils';
 
-async function generateKey(setEphemeralKey) {
-	var ephemeralKey = nacl.sign.keyPair();
-	console.log(ephemeralKey);
-	setEphemeralKey(ephemeralKey);
-}
 
-async function httpCall(msg) {
-	console.log("to send query params:", msg);
-	const Http = new XMLHttpRequest();
-	const url = 'http://localhost:37681';
-	// const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
-	Http.open("POST", url);
-	Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8"); 
-	Http.setRequestHeader("Access-Control-Allow-Origin", "record.sui-phase2-ceremony.iseriohn.com"); 
-	Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-	Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
-	Http.send(msg);
 
-	return Http;
-}
-
-async function register(currentAccount, signMessage) {
-	var toSign = message + currentAccount.address;
-	console.log("Message to sign:", toSign);
-
-	let bytes = new TextEncoder().encode(toSign);
-	// PersonalMessage { message: Vec<u8> } BCS encoding 
-	// requires the length of the message to be prepended to the message. 
-	let serialized_msg = new Uint8Array(bytes.length + 1);
-	serialized_msg.set([bytes.length], 0);
-	serialized_msg.set(bytes, 1);
-	var sig = await signMessage({message: serialized_msg});
-	// console.log(sig);
-	// console.log(verifyMessage(m, sig.signature, 3));
-
-	var registration = {
-		"address": currentAccount.address, 
-		"sig": sig.signature,
-	};
-
-	var msg = JSON.stringify({
-		jsonrpc: '2.0',
-		method: 'register',
-		"params": [registration],
-		id: 1
-	});
-	console.log(msg);
-
-	var Http = await httpCall(msg);
-	Http.onreadystatechange = (e) => {
-		if(Http.readyState === 4 && Http.status === 200) {
-			alert(Http.responseText);
-			if (JSON.parse(Http.responseText).result.startsWith("Registered successfully")) {
-				var registration = {
-					"address": currentAccount.address, 
-					"pk": pk,
-					"sig": sig.signature
-				};
-				setListRegistration(listRegistration => [...listRegistration, registration]);
-			}
-		}
-	}
-}
 
 async function generateSig(currentAccount, signMessage, ephemeralKey, setListRegistration) {
 	var pk = btoa(String.fromCharCode.apply(null, ephemeralKey["publicKey"]));
@@ -211,16 +150,44 @@ function Registration({registration, index}) {
 
 export default function Contribute() {
 	const { currentAccount, signMessage } = useWalletKit();
+    const [ lengthOfQueue, setLengthOfQueue ] = useState(0);
 	const [ephemeralKey, setEphemeralKey] = useState(null);
 	const [userState, setUserState] = useState(null);
 	const [listRegistration, setListRegistration] = useState([]);
-	
+
+    async function fetchQueueLength() {
+        var msg = JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'get_queue',
+            id: 1
+        });
+    
+        var Http = await httpCall(msg);
+        Http.onreadystatechange = (e) => {
+            if(Http.readyState === 4 && Http.status === 200) {
+                console.log(Http.responseText);
+                setLengthOfQueue(JSON.parse(Http.responseText).result.length);
+            }
+        }
+    }
+
+    setInterval(fetchQueueLength, refreshTime);
+
 	return (
 		<div className="flex flex-col gap-4">
 			<h2 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
 				Get in line to contribute
 			</h2>
-            <p> To register, sign on the message "{message}0x..." </p>
+
+			{(
+				<Alert>
+					<Terminal className="h-4 w-4" />
+					<AlertTitle>Queue Status</AlertTitle>
+					<AlertDescription>
+						There are currently {lengthOfQueue} contributors in the queue.
+					</AlertDescription>
+				</Alert>
+			)}
 
 			{!currentAccount && (
 				<Alert>

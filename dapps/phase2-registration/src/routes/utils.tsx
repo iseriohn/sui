@@ -1,4 +1,5 @@
 export const registrationMsg = "I register to contribute to Phase2 Ceremony with address ";
+export const refreshTime = 5 * 1000; // Refresh every 5 seconds;
 
 export async function generateKey(setEphemeralKey) {
 	var ephemeralKey = nacl.sign.keyPair();
