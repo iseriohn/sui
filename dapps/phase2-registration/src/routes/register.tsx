@@ -10,17 +10,17 @@ import { Terminal } from 'lucide-react';
 import { registrationMsg, httpCall, generateSignature } from './utils';
 
 async function register(currentAccount, signMessage) {
-    var addr = currentAccount.address;
+	var addr = currentAccount.address;
 	var toSign = registrationMsg(addr);
-    var sig = await generateSignature(signMessage, toSign);
+	var sig = await generateSignature(signMessage, toSign);
 	console.log(sig);
 
 	var registration = {
-		"address": addr, 
+		"address": addr,
 		"sig": sig.signature,
 	};
 
-    var msg = JSON.stringify({
+	var msg = JSON.stringify({
 		jsonrpc: '2.0',
 		method: 'register',
 		"params": [registration],
@@ -30,7 +30,7 @@ async function register(currentAccount, signMessage) {
 
 	var Http = await httpCall(msg);
 	Http.onreadystatechange = (e) => {
-		if(Http.readyState === 4 && Http.status === 200) {
+		if (Http.readyState === 4 && Http.status === 200) {
 			alert(Http.responseText);
 		}
 	}
@@ -38,13 +38,13 @@ async function register(currentAccount, signMessage) {
 
 export default function Register() {
 	const { currentAccount, signMessage } = useWalletKit();
-	
+
 	return (
 		<div className="flex flex-col gap-4">
 			<h2 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
 				Register to participate
 			</h2>
-            <p> To register, sign on the message "{registrationMsg}0x..." </p>
+			<p> To register, sign on the message "{registrationMsg}0x..." </p>
 
 			{!currentAccount && (
 				<Alert>
