@@ -15,7 +15,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
 import * as fastFile from "fastfile";
-import { refreshTime, joinQueueMsg, httpCall, generateSignature } from './utils';
+import { refreshTime, joinQueueMsg, contributeMsg, httpCall, generateSignature } from './utils';
 
 async function runSNARKJS(params, index) {
     const oldParams = { type: "mem" };
@@ -26,7 +26,7 @@ async function runSNARKJS(params, index) {
     const curve = await ffjavascript.buildBn128();
     const startingTime = (new Date()).getTime();
     console.log("starting");
-    await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams);
+    const contributionHash = await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams);
     console.log("finishing");
     const endingTime = (new Date()).getTime();
 
@@ -37,7 +37,7 @@ async function runSNARKJS(params, index) {
     const fdFrom = await fastFile.readExisting(newParams);
     const response = await fdFrom.read(fdFrom.totalSize, 0);
     fdFrom.close();
-    return [].slice.call(response);
+    return { params: [].slice.call(response), hash: [].slice.call(contributionHash) };
 }
 
 async function contributeInBrowser(currentAccount, signMessage, setUserState) {
@@ -60,7 +60,7 @@ async function contributeInBrowser(currentAccount, signMessage, setUserState) {
     });
 
     setUserState(1);
-    var getInQueueId = setInterval( async function() { 
+    var getInQueueId = setInterval(async function () {
         const http = await httpCall(msg);
         http.onreadystatechange = async (e) => {
             if (http.readyState === 4 && http.status === 200) {
@@ -76,15 +76,22 @@ async function contributeInBrowser(currentAccount, signMessage, setUserState) {
                 if (responseText.result.hasOwnProperty("params")) {
                     clearInterval(getInQueueId);
                     var new_params = [];
+                    var hashes = [];
                     var index = 0;
                     for (const params of responseText.result.params) {
                         index += 1;
-                        new_params.push(await runSNARKJS(params, index));
+                        var res = await runSNARKJS(params, index)
+                        new_params.push(res.params);
+                        hashes.push(res.hash);
                     }
-        
+
+                    var toSignRep = contributeMsg(addr, hashes);
+                    console.log(toSignRep);
+                    var sigRep = await generateSignature(signMessage, toSignRep);
+
                     const response = {
                         "address": addr,
-                        "sig": sig.signature,
+                        "sig": sigRep.signature,
                         "params": new_params,
                     }
                     const msgContribute = JSON.stringify({
@@ -98,7 +105,7 @@ async function contributeInBrowser(currentAccount, signMessage, setUserState) {
                         if (httpRep.readyState === 4 && httpRep.status === 200) {
                             alert(httpRep.responseText);
                         }
-                    } 
+                    }
                     setUserState(null);
                     return;
                 }
@@ -106,9 +113,9 @@ async function contributeInBrowser(currentAccount, signMessage, setUserState) {
                     alert(http.responseText);
                     return;
                 }
-           }
-        }    
-    }, refreshTime );
+            }
+        }
+    }, refreshTime);
     console.log("getInQueueId:", getInQueueId);
 }
 
@@ -286,7 +293,7 @@ export default function Contribute() {
                     ))}
                 </div>}
             </Tabs> */}
-            
+
         </div>
     );
 }

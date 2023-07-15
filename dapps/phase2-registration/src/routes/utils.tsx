@@ -10,6 +10,14 @@ export function joinQueueMsg(addr, pk) {
     return "I join the contribution queue with address " + addr + " and attestation pk " + pk;
 }
 
+export function contributeMsg(addr, params) {
+    var msg = "I contribute with address " + addr;
+    for (var param of params) {
+        msg = msg + " #1 contribution hash: " + param;
+    }
+    return msg;
+}
+
 export async function generateKey(setEphemeralKey) {
     var ephemeralKey = nacl.sign.keyPair();
     console.log(ephemeralKey);
@@ -19,8 +27,8 @@ export async function generateKey(setEphemeralKey) {
 export async function httpCall(msg) {
     console.log("to send query params:", msg);
     const Http = new XMLHttpRequest();
-    // const url = 'http://localhost:37681';
-    const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+    const url = 'http://localhost:37681';
+    //const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
     Http.open("POST", url);
     Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
     Http.setRequestHeader("Access-Control-Allow-Origin", "*.sui-phase2-ceremony.iseriohn.com");
