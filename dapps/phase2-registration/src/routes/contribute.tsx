@@ -120,7 +120,7 @@ export default function Contribute() {
                 </div>
             </Tabs>
 
-            <Tabs className="w-full">
+            {/* <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
                         <Button disabled={!currentAccount || userState != null} onClick={async () => await contributeViaDocker("snarkjs", currentAccount, signMessage, setUserState)} >
@@ -128,7 +128,7 @@ export default function Contribute() {
                         </Button>
                     </div>
                 </div>
-            </Tabs>
+            </Tabs> */}
 
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">

@@ -1,4 +1,4 @@
-import { addEphemeralKeyMsg, generateKey, generateSignature, httpCall, downloadScript } from "./utils";
+import { addEphemeralKeyMsg, generateSignature, httpCall, downloadScript } from "./utils";
 import nacl from 'tweetnacl';
 
 const dockerFile =
@@ -31,9 +31,9 @@ export async function contributeViaDocker(repo, currentAccount, signMessage, set
     http.onreadystatechange = (e) => {
         if (http.readyState === 4 && http.status === 200) {
             alert(http.responseText);
-            var text = "SK=" + btoa(String.fromCharCode.apply(null, ephemeralKey.secretKey));
+            var text = "ATTESTATION_KEY=" + btoa(String.fromCharCode.apply(null, ephemeralKey.secretKey));
             text = text + "\nOPTION=" + repo;
-            text = text + "\nentropy=[";
+            text = text + "\nENTROPY=[";
             var responseText = JSON.parse(http.responseText);
             for (var i = 1; i <= responseText.result.num_circuits; ++i) {
                 let entropy = prompt("Please enter any text to add entropy in contribution to circuit #" + i.toString(), "");

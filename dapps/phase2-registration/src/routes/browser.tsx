@@ -73,7 +73,7 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                     }
 
                     var toSignRep = contributeMsg(addr, hashes);
-                    console.log(toSignRep);
+                    console.log("toSign", toSignRep);
                     var sigRep = await generateSignature(signMessage, toSignRep);
 
                     const response = {
