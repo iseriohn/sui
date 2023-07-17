@@ -1044,6 +1044,9 @@ importers:
       fastfile:
         specifier: ^0.0.20
         version: 0.0.20
+      file-saver:
+        specifier: ^2.0.5
+        version: 2.0.5
       postcss:
         specifier: ^8.4.24
         version: 8.4.24
@@ -9716,7 +9719,6 @@ packages:
 
   /@types/node@20.3.2:
     resolution: {integrity: sha512-vOBLVQeCQfIcF/2Y7eKFTqrMnizK5lRNQ7ykML/5RuwVXVWxYkgwS7xbt4B6fKCUPgbSL5FSsjHQpaGQP/dQmw==}
-    dev: true
 
   /@types/normalize-package-data@2.4.1:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
@@ -10227,7 +10229,7 @@ packages:
       '@babel/plugin-transform-react-jsx-self': 7.22.5(@babel/core@7.22.5)
       '@babel/plugin-transform-react-jsx-source': 7.22.5(@babel/core@7.22.5)
       react-refresh: 0.14.0
-      vite: 4.3.9(@types/node@18.16.18)(sass@1.63.6)
+      vite: 4.3.9(@types/node@20.3.2)(sass@1.63.6)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -14737,6 +14739,10 @@ packages:
     engines: {node: ^10.12.0 || >=12.0.0}
     dependencies:
       flat-cache: 3.0.4
+    dev: true
+
+  /file-saver@2.0.5:
+    resolution: {integrity: sha512-P9bmyZ3h/PRG+Nzga+rbdI4OEpNDzAVyy74uVO9ATgzLK6VtAsYybF/+TOCvrc0MO793d6+42lLyZTw7/ArVzA==}
     dev: true
 
   /file-system-cache@2.4.1:
@@ -23850,7 +23856,7 @@ packages:
       debug: 4.3.4(supports-color@8.1.1)
       globrex: 0.1.2
       tsconfck: 2.1.1(typescript@5.1.5)
-      vite: 4.3.9(@types/node@18.16.18)(sass@1.63.6)
+      vite: 4.3.9(@types/node@20.3.2)(sass@1.63.6)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -23920,7 +23926,6 @@ packages:
       sass: 1.63.6
     optionalDependencies:
       fsevents: 2.3.2
-    dev: true
 
   /vitest@0.32.2(@vitest/ui@0.30.1)(happy-dom@9.20.3)(playwright@1.35.1):
     resolution: {integrity: sha512-hU8GNNuQfwuQmqTLfiKcqEhZY72Zxb7nnN07koCUNmntNxbKQnVbeIS6sqUgR3eXSlbOpit8+/gr1KpqoMgWCQ==}

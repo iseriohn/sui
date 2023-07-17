@@ -1,4 +1,5 @@
 import { bcs } from "@mysten/sui.js";
+import { saveAs } from 'file-saver';
 
 export const refreshTime = 5 * 1000; // Refresh every 5 seconds;
 
@@ -18,17 +19,22 @@ export function contributeMsg(addr, params) {
     return msg;
 }
 
-export async function generateKey(setEphemeralKey) {
-    var ephemeralKey = nacl.sign.keyPair();
-    console.log(ephemeralKey);
-    setEphemeralKey(ephemeralKey);
+export function addEphemeralKeyMsg(addr, pk) {
+    return "I'll contribute via Docker with address " + addr + " and attestation pk " + pk;
+}
+
+export function downloadScript(fileName, text) {
+    var blob = new Blob([text], {
+        type: "text/Dockerfile;charset=utf-8;",
+    });
+    saveAs(blob, fileName);
 }
 
 export async function httpCall(msg) {
     console.log("to send query params:", msg);
     const Http = new XMLHttpRequest();
-    // const url = 'http://localhost:37681';
-    const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+    const url = 'http://localhost:37681';
+    // const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
     Http.open("POST", url);
     Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
     Http.setRequestHeader("Access-Control-Allow-Origin", "*.sui-phase2-ceremony.iseriohn.com");
