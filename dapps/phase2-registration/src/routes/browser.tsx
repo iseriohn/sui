@@ -91,16 +91,19 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                     const httpRep = await httpCall(msgContribute);
                     httpRep.onreadystatechange = async (e) => {
                         if (httpRep.readyState === 4 && httpRep.status === 200) {
-                            console.log(JSON.parse(httpRep.responseText).result);
-                            const contribution = {
-                                "index": JSON.parse(httpRep.responseText).result,
-                                "address": addr,
-                                "pk": pk,
-                                "hash": hashes,
-                                "sig": sigRep.signature,
+                            if (JSON.parse(httpRep.responseText).hasOwnProperty("error")) {
+                                alert(httpRep.responseText);
+                            } else {
+                                const contribution = {
+                                    "index": JSON.parse(httpRep.responseText).result.index,
+                                    "address": addr,
+                                    "pk": pk,
+                                    "hash": hashes,
+                                    "sig": sigRep.signature,
+                                }
+                                setListContribution(listContribution => [...listContribution, contribution]);
+                                alert("Successfully recorded #" + contribution.index + " contribution");
                             }
-                            setListContribution(listContribution => [...listContribution, contribution]);
-                            alert(httpRep.responseText);
                         }
                     }
                     setUserState(null);

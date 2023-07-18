@@ -18,7 +18,7 @@ function Contribution({ contribution }) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>{contribution.index}</CardTitle>
+                <CardTitle>Contribution #{contribution.index}</CardTitle>
                 <CardDescription>Wallet address: {contribution.address}</CardDescription>
             </CardHeader>
             <CardContent>
