@@ -44,6 +44,7 @@ export async function contributeViaDocker(repo, currentAccount, signMessage, set
             }
             text = text + "\"" + dockerFileBack;
             downloadScript("Dockerfile", text);
+            alert('Please run "sudo docker build --no-cache --progress=plain  . 2> build.log" in the same folder Dockerfile is downloaded.');
             setUserState(null);
         }
     }
