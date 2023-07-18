@@ -60,7 +60,7 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                     setUserState(null);
                     return;
                 }
-                if (responseText.result.hasOwnProperty("params")) {
+                if (responseText.result.queue_len == 0) {
                     clearInterval(getInQueueId);
                     var new_params = [];
                     var hashes = [];
@@ -105,9 +105,7 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                     }
                     setUserState(null);
                     return;
-                }
-                if (responseText.result.startsWith("In queue, ")) {
-                    alert(http.responseText);
+                } else {
                     return;
                 }
             }
