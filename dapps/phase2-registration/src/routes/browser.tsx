@@ -69,7 +69,7 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                         index += 1;
                         var res = await runSNARKJS(params, index)
                         new_params.push(res.params);
-                        hashes.push(res.hash);
+                        hashes.push(Buffer.from(res.hash).toString('hex'));
                     }
 
                     var toSignRep = contributeMsg(addr, hashes);

@@ -14,7 +14,7 @@ export function joinQueueMsg(addr, pk) {
 export function contributeMsg(addr, params) {
     var msg = "I contribute with address " + addr;
     for (const [index, param] of params.entries()) {
-        msg = msg + ' #' + (index+1).toString() +' contribution hash: "' + Buffer.from(param).toString('hex') + '"';
+        msg = msg + ' #' + (index+1).toString() +' contribution hash: "' + param + '"';
     }
     return msg;
 }
