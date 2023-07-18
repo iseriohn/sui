@@ -9,7 +9,7 @@ import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { refreshTime, httpCall } from './utils';
+import { getQueueRefreshTime, httpCall } from './utils';
 import { contributeInBrowser } from './browser';
 import { contributeViaDocker } from './docker';
 
@@ -63,7 +63,7 @@ export default function Contribute() {
         }
     }
 
-    setInterval(fetchQueueLength, refreshTime);
+    setInterval(fetchQueueLength, getQueueRefreshTime);
 
     return (
         <div className="flex flex-col gap-4">

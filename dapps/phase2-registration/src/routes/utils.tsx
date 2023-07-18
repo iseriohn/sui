@@ -1,7 +1,8 @@
 import { bcs } from "@mysten/sui.js";
 import { saveAs } from 'file-saver';
 
-export const refreshTime = 30 * 1000; // Refresh every 5 seconds;
+export const joinQueueRefreshTime = 10 * 1000; // Refresh every 10 seconds;
+export const getQueueRefreshTime = 30 * 1000; // Refresh every 30 seconds;
 
 export function registrationMsg(addr) {
     return "I register to contribute to Phase2 Ceremony with address " + addr;

@@ -2,7 +2,7 @@ import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
 import * as fastFile from "fastfile";
 import { toB64 } from '@mysten/sui.js';
-import { refreshTime, joinQueueMsg, contributeMsg, httpCall, generateSignature } from './utils';
+import { joinQueueRefreshTime, joinQueueMsg, contributeMsg, httpCall, generateSignature } from './utils';
 
 async function runSNARKJS(params, index) {
     const oldParams = { type: "mem" };
@@ -47,7 +47,7 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
     });
 
     setUserState(1);
-    var getInQueueId = setInterval(async function () {
+    var getInQueueId = setInterval(async function join() {
         const http = await httpCall(msg);
         http.onreadystatechange = async (e) => {
             if (http.readyState === 4 && http.status === 200) {
@@ -113,6 +113,6 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                 }
             }
         }
-    }, refreshTime);
+    }, joinQueueRefreshTime);
     console.log("getInQueueId:", getInQueueId);
 }
