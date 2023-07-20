@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { formatAmount, formatDate, useGetTotalTransactionBlocks, useRpcClient } from '@mysten/core';
+import { Heading, Text, LoadingIndicator } from '@mysten/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ParentSize } from '@visx/responsive';
 import clsx from 'clsx';
@@ -10,9 +11,6 @@ import { AreaGraph } from './AreaGraph';
 import { FormattedStatsAmount } from './HomeMetrics/FormattedStatsAmount';
 import { ErrorBoundary } from './error-boundary/ErrorBoundary';
 import { Card } from '~/ui/Card';
-import { Heading } from '~/ui/Heading';
-import { LoadingSpinner } from '~/ui/LoadingSpinner';
-import { Text } from '~/ui/Text';
 
 function TooltipContent({
 	data: { epochTotalTransactions, epochStartTimestamp, epoch },
@@ -68,7 +66,7 @@ export function TransactionsCardGraph() {
 	const { data: totalTransactions } = useGetTotalTransactionBlocks();
 	const { data: epochMetrics, isLoading } = useEpochTransactions();
 	return (
-		<Card bg="white" spacing={!epochMetrics?.length ? 'lg' : 'lgGraph'} height="full">
+		<Card bg="white/80" spacing={!epochMetrics?.length ? 'lg' : 'lgGraph'} height="full">
 			<div className="flex h-full flex-col gap-4 overflow-hidden">
 				<Heading variant="heading4/semibold" color="steel-darker">
 					Transaction Blocks
@@ -79,7 +77,7 @@ export function TransactionsCardGraph() {
 						label="Total"
 						tooltip="Total transaction blocks"
 						amount={totalTransactions}
-						size="sm"
+						size="md"
 					/>
 				</div>
 				<div
@@ -90,7 +88,7 @@ export function TransactionsCardGraph() {
 				>
 					{isLoading ? (
 						<div className="flex flex-col items-center gap-1">
-							<LoadingSpinner />
+							<LoadingIndicator />
 							<Text color="steel" variant="body/medium">
 								loading data
 							</Text>

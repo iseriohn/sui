@@ -40,6 +40,7 @@ use sui_types::messages_checkpoint::{
     CheckpointCommitment, CheckpointSequenceNumber, ECMHLiveObjectSetDigest, EndOfEpochData,
 };
 use sui_types::object::ObjectRead;
+use sui_types::transaction::SenderSignedData;
 
 use crate::errors::{Context, IndexerError};
 use crate::metrics::IndexerMetrics;
@@ -485,13 +486,14 @@ impl PgIndexerStore {
         tx: Transaction,
         options: Option<&SuiTransactionBlockResponseOptions>,
     ) -> Result<SuiTransactionBlockResponse, IndexerError> {
-        let transaction: SuiTransactionBlock =
-            serde_json::from_str(&tx.transaction_content).map_err(|err| {
+        let sender_signed_data: SenderSignedData =
+            bcs::from_bytes(&tx.raw_transaction).map_err(|err| {
                 IndexerError::InsertableParsingError(format!(
-                    "Failed converting transaction JSON {:?} to SuiTransactionBlock with error: {:?}",
-                    tx.transaction_content, err
+                    "Failed converting transaction BCS to SenderSignedData with error: {:?}",
+                    err
                 ))
             })?;
+        let transaction = SuiTransactionBlock::try_from(sender_signed_data, &self.module_cache)?;
         let effects: SuiTransactionBlockEffects = serde_json::from_str(&tx.transaction_effects_content).map_err(|err| {
         IndexerError::InsertableParsingError(format!(
             "Failed converting transaction effect JSON {:?} to SuiTransactionBlockEffects with error: {:?}",
@@ -2640,7 +2642,8 @@ impl PartitionManager {
     }
 }
 
-#[once(time = 20, result = true)]
+// Run this function only once every `time` seconds
+#[once(time = 60, sync_writes = true, result = true)]
 fn get_network_metrics_cached(cp: &PgConnectionPool) -> Result<NetworkMetrics, IndexerError> {
     let metrics = read_only_blocking!(cp, |conn| diesel::sql_query(
         "SELECT * FROM network_metrics;"

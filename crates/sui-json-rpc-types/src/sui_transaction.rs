@@ -597,8 +597,7 @@ impl TryFrom<TransactionEffects> for SuiTransactionBlockEffects {
                     executed_epoch: effect.executed_epoch(),
                     modified_at_versions: effect
                         .modified_at_versions()
-                        .iter()
-                        .copied()
+                        .into_iter()
                         .map(|(object_id, sequence_number)| {
                             SuiTransactionBlockEffectsModifiedAtVersions {
                                 object_id,
@@ -607,9 +606,15 @@ impl TryFrom<TransactionEffects> for SuiTransactionBlockEffects {
                         })
                         .collect(),
                     gas_used: effect.gas_cost_summary().clone(),
-                    shared_objects: to_sui_object_ref(effect.shared_objects().to_vec()),
+                    shared_objects: to_sui_object_ref(
+                        effect
+                            .input_shared_objects()
+                            .into_iter()
+                            .map(|(obj_ref, _)| obj_ref)
+                            .collect(),
+                    ),
                     transaction_digest: *effect.transaction_digest(),
-                    created: to_owned_ref(effect.created().to_vec()),
+                    created: to_owned_ref(effect.created()),
                     mutated: to_owned_ref(effect.mutated().to_vec()),
                     unwrapped: to_owned_ref(effect.unwrapped().to_vec()),
                     deleted: to_sui_object_ref(effect.deleted().to_vec()),
