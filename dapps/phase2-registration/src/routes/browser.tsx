@@ -2,7 +2,7 @@ import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
 import * as fastFile from "fastfile";
 import { toB64 } from '@mysten/sui.js';
-import { joinQueueRefreshTime, joinQueueMsg, contributeMsg, httpCall, generateSignature } from './utils';
+import { refreshTime, joinQueueMsg, contributeMsg, httpCall, generateSignature } from './utils';
 
 async function runSNARKJS(params, index) {
     const oldParams = { type: "mem" };
@@ -113,6 +113,6 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
                 }
             }
         }
-    }, joinQueueRefreshTime);
+    }, refreshTime);
     console.log("getInQueueId:", getInQueueId);
 }

@@ -1,8 +1,7 @@
 import { bcs } from "@mysten/sui.js";
 import { saveAs } from 'file-saver';
 
-export const joinQueueRefreshTime = 10 * 1000; // Refresh every 10 seconds;
-export const getQueueRefreshTime = 30 * 1000; // Refresh every 30 seconds;
+export const refreshTime = 30 * 1000; // Refresh every 10 seconds;
 
 export function registrationMsg(addr) {
     return "I register to contribute to Phase2 Ceremony with address " + addr;
@@ -31,12 +30,13 @@ export function downloadScript(fileName, text) {
     saveAs(blob, fileName);
 }
 
-export async function httpCall(msg) {
+export function httpCall(msg) {
     console.log("to send query params:", msg);
     const Http = new XMLHttpRequest();
     // const url = 'http://localhost:37681';
     const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
     Http.open("POST", url);
+    Http.timeout = 2000;
     Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
     Http.setRequestHeader("Access-Control-Allow-Origin", "*.sui-phase2-ceremony.iseriohn.com");
     Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");

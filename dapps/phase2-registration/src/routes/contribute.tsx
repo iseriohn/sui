@@ -9,9 +9,12 @@ import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { getQueueRefreshTime, httpCall } from './utils';
+import { refreshTime, httpCall } from './utils';
 import { contributeInBrowser } from './browser';
 import { contributeViaDocker } from './docker';
+import { setIntervalAsync, clearIntervalAsync } from 'set-interval-async';
+import React from 'react';
+import * as Progress from '@radix-ui/react-progress';
 
 function Contribution({ contribution }) {
     console.log(contribution);
@@ -47,24 +50,25 @@ export default function Contribute() {
     const [userState, setUserState] = useState(null);
     const [listContribution, setListContribution] = useState([]);
 
-    async function fetchQueueLength() {
+    async function getQueue() {
         var msg = JSON.stringify({
             jsonrpc: '2.0',
             method: 'get_queue',
             id: 1
         });
 
-        var Http = await httpCall(msg);
+        var Http = httpCall(msg);
         Http.onreadystatechange = (e) => {
             if (Http.readyState === 4 && Http.status === 200) {
-                console.log(Http.responseText);
+        console.log(userState);
+        console.log(Http.responseText);
                 setLengthOfQueue(JSON.parse(Http.responseText).result.length);
             }
         }
     }
-
-    setInterval(fetchQueueLength, getQueueRefreshTime);
-
+    getQueue(); 
+    setInterval(getQueue, refreshTime);
+    
     return (
         <div className="flex flex-col gap-4">
             <h2 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
@@ -113,7 +117,8 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null} onClick={async () => await contributeInBrowser(currentAccount, signMessage, setUserState, setListContribution)} >
+                        <Button disabled={!currentAccount || userState != null} onClick={async () => setUserState(1) }>
+                            {/* async () => await contributeInBrowser(currentAccount, signMessage, setUserState, setListContribution)} > */}
                             Contribute in browser with snarkjs
                         </Button>
                     </div>
@@ -147,7 +152,6 @@ export default function Contribute() {
                     ))}
                 </div>}
             </Tabs>
-
         </div>
     );
 }
