@@ -50,8 +50,8 @@ export default function Contribute() {
 
     if (queueState === null) {
         getQueue(setQueueState);
+        setInterval(getQueue, refreshTime, setQueueState);
     }
-    setInterval(getQueue, refreshTime, setQueueState);
     
     return (
         <div className="flex flex-col gap-4">
