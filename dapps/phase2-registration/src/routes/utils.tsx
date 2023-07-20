@@ -33,8 +33,8 @@ export function downloadScript(fileName, text) {
 export function httpCall(msg) {
     console.log("to send query params:", msg);
     const Http = new XMLHttpRequest();
-    const url = 'http://localhost:37681';
-    // const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
+    // const url = 'http://localhost:37681';
+    const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
     Http.open("POST", url);
     Http.timeout = 2000;
     Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");

@@ -117,8 +117,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null} onClick={async () => setUserState(1) }>
-                            {/* async () => await contributeInBrowser(currentAccount, signMessage, setUserState, setListContribution)} > */}
+                        <Button disabled={!currentAccount || userState != null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, setUserState, setListContribution)} >
                             Contribute in browser with snarkjs
                         </Button>
                     </div>
