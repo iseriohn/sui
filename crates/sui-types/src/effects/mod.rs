@@ -190,31 +190,41 @@ impl TransactionEffects {
     }
 }
 
+pub enum InputSharedObjectKind {
+    Mutate,
+    ReadOnly,
+}
+
 #[enum_dispatch]
 pub trait TransactionEffectsAPI {
     fn status(&self) -> &ExecutionStatus;
     fn into_status(self) -> ExecutionStatus;
     fn executed_epoch(&self) -> EpochId;
-    fn modified_at_versions(&self) -> &[(ObjectID, SequenceNumber)];
-    fn shared_objects(&self) -> &[ObjectRef];
-    fn created(&self) -> &[(ObjectRef, Owner)];
-    fn mutated(&self) -> &[(ObjectRef, Owner)];
-    fn unwrapped(&self) -> &[(ObjectRef, Owner)];
-    fn deleted(&self) -> &[ObjectRef];
-    fn unwrapped_then_deleted(&self) -> &[ObjectRef];
-    fn wrapped(&self) -> &[ObjectRef];
-    fn gas_object(&self) -> &(ObjectRef, Owner);
+    fn modified_at_versions(&self) -> Vec<(ObjectID, SequenceNumber)>;
+    /// Returns the list of shared objects used in the input, with full object reference
+    /// and use kind. This is needed in effects because in transaction we only have object ID
+    /// for shared objects. Their version and digest can only be figured out after sequencing.
+    /// Also provides the use kind to indicate whether the object was mutated or read-only.
+    /// Down the road it could also indicate use-of-deleted.
+    fn input_shared_objects(&self) -> Vec<(ObjectRef, InputSharedObjectKind)>;
+    fn created(&self) -> Vec<(ObjectRef, Owner)>;
+    fn mutated(&self) -> Vec<(ObjectRef, Owner)>;
+    fn unwrapped(&self) -> Vec<(ObjectRef, Owner)>;
+    fn deleted(&self) -> Vec<ObjectRef>;
+    fn unwrapped_then_deleted(&self) -> Vec<ObjectRef>;
+    fn wrapped(&self) -> Vec<ObjectRef>;
+    fn gas_object(&self) -> (ObjectRef, Owner);
     fn events_digest(&self) -> Option<&TransactionEventsDigest>;
     fn dependencies(&self) -> &[TransactionDigest];
     // All changed objects include created, mutated and unwrapped objects,
     // they do NOT include wrapped and deleted.
-    fn all_changed_objects(&self) -> Vec<(&ObjectRef, &Owner, WriteKind)>;
+    fn all_changed_objects(&self) -> Vec<(ObjectRef, Owner, WriteKind)>;
 
-    fn all_deleted(&self) -> Vec<(&ObjectRef, DeleteKind)>;
+    fn all_deleted(&self) -> Vec<(ObjectRef, DeleteKind)>;
 
     fn transaction_digest(&self) -> &TransactionDigest;
 
-    fn mutated_excluding_gas(&self) -> Vec<&(ObjectRef, Owner)>;
+    fn mutated_excluding_gas(&self) -> Vec<(ObjectRef, Owner)>;
 
     fn gas_cost_summary(&self) -> &GasCostSummary;
 
@@ -226,8 +236,12 @@ pub trait TransactionEffectsAPI {
     fn gas_cost_summary_mut_for_testing(&mut self) -> &mut GasCostSummary;
     fn transaction_digest_mut_for_testing(&mut self) -> &mut TransactionDigest;
     fn dependencies_mut_for_testing(&mut self) -> &mut Vec<TransactionDigest>;
-    fn shared_objects_mut_for_testing(&mut self) -> &mut Vec<ObjectRef>;
-    fn modified_at_versions_mut_for_testing(&mut self) -> &mut Vec<(ObjectID, SequenceNumber)>;
+    fn unsafe_add_input_shared_object_for_testing(
+        &mut self,
+        obj_ref: ObjectRef,
+        kind: InputSharedObjectKind,
+    );
+    fn unsafe_add_deleted_object_for_testing(&mut self, object: ObjectRef);
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]

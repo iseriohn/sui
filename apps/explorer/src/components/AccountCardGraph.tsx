@@ -3,6 +3,7 @@
 
 import { formatAmount, formatDate } from '@mysten/core';
 import { type AllEpochsAddressMetrics } from '@mysten/sui.js';
+import { Heading, LoadingIndicator, Text } from '@mysten/ui';
 import { ParentSize } from '@visx/responsive';
 import clsx from 'clsx';
 import { useMemo } from 'react';
@@ -13,9 +14,6 @@ import { ErrorBoundary } from './error-boundary/ErrorBoundary';
 import { useGetAddressMetrics } from '~/hooks/useGetAddressMetrics';
 import { useGetAllEpochAddressMetrics } from '~/hooks/useGetAllEpochAddressMetrics';
 import { Card } from '~/ui/Card';
-import { Heading } from '~/ui/Heading';
-import { LoadingSpinner } from '~/ui/LoadingSpinner';
-import { Text } from '~/ui/Text';
 
 const graphDataField = 'cumulativeAddresses' as const;
 const graphDataText = 'Total accounts';
@@ -45,7 +43,7 @@ export function AccountsCardGraph() {
 	});
 	const adjEpochAddressMetrics = useMemo(() => allEpochMetrics?.slice(-30), [allEpochMetrics]);
 	return (
-		<Card bg="white" spacing={!adjEpochAddressMetrics?.length ? 'lg' : 'lgGraph'} height="full">
+		<Card bg="white/80" spacing={!adjEpochAddressMetrics?.length ? 'lg' : 'lgGraph'} height="full">
 			<div className="flex h-full flex-col gap-4 overflow-hidden">
 				<Heading variant="heading4/semibold" color="steel-darker">
 					Accounts
@@ -54,23 +52,23 @@ export function AccountsCardGraph() {
 					<FormattedStatsAmount
 						orientation="vertical"
 						label="Total"
-						tooltip="Accounts that have participated in at least one transaction since network genesis"
+						tooltip="Number of accounts that have sent or received transactions since network genesis"
 						amount={addressMetrics?.cumulativeAddresses}
-						size="sm"
+						size="md"
 					/>
 					<FormattedStatsAmount
 						orientation="vertical"
 						label="Total Active"
-						tooltip="Total active accounts"
+						tooltip="Total number of accounts that have signed transactions since network genesis"
 						amount={addressMetrics?.cumulativeActiveAddresses}
-						size="sm"
+						size="md"
 					/>
 					<FormattedStatsAmount
 						orientation="vertical"
 						label="Daily Active"
-						tooltip="Total daily active accounts"
+						tooltip="Number of accounts that have sent or received transactions in the last epoch"
 						amount={addressMetrics?.dailyActiveAddresses}
-						size="sm"
+						size="md"
 					/>
 				</div>
 				<div
@@ -81,7 +79,7 @@ export function AccountsCardGraph() {
 				>
 					{isLoading ? (
 						<div className="flex flex-col items-center gap-1">
-							<LoadingSpinner />
+							<LoadingIndicator />
 							<Text color="steel" variant="body/medium">
 								loading data
 							</Text>
