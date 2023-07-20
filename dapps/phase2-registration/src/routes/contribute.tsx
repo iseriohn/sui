@@ -9,12 +9,10 @@ import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { refreshTime, httpCall } from './utils';
+import { refreshTime } from './utils';
 import { contributeInBrowser } from './browser';
 import { contributeViaDocker } from './docker';
-import { setIntervalAsync, clearIntervalAsync } from 'set-interval-async';
-import React from 'react';
-import * as Progress from '@radix-ui/react-progress';
+import { getQueue } from './queue';
 
 function Contribution({ contribution }) {
     console.log(contribution);
@@ -46,28 +44,14 @@ function Contribution({ contribution }) {
 
 export default function Contribute() {
     const { currentAccount, signMessage } = useWalletKit();
-    const [lengthOfQueue, setLengthOfQueue] = useState(0);
+    const [queueState, setQueueState] = useState(null);
     const [userState, setUserState] = useState(null);
     const [listContribution, setListContribution] = useState([]);
 
-    async function getQueue() {
-        var msg = JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'get_queue',
-            id: 1
-        });
-
-        var Http = httpCall(msg);
-        Http.onreadystatechange = (e) => {
-            if (Http.readyState === 4 && Http.status === 200) {
-        console.log(userState);
-        console.log(Http.responseText);
-                setLengthOfQueue(JSON.parse(Http.responseText).result.length);
-            }
-        }
+    if (queueState === null) {
+        getQueue(setQueueState);
     }
-    getQueue(); 
-    setInterval(getQueue, refreshTime);
+    setInterval(getQueue, refreshTime, setQueueState);
     
     return (
         <div className="flex flex-col gap-4">
@@ -75,9 +59,11 @@ export default function Contribute() {
                 Get in line to contribute
             </h2>
 
+            {queueState != null && (
             <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
-                There are currently {lengthOfQueue} contributors in the queue.
+                There are currently {queueState.tail - queueState.head} contributors in the queue.
             </h3>
+            )}
 
             {!currentAccount && (
                 <Alert>
