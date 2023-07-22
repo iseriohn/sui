@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { createRef, useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { refreshTime } from './utils';
 import { contributeInBrowser } from './browser';
@@ -48,11 +48,15 @@ export default function Contribute() {
     const { currentAccount, signMessage } = useWalletKit();
     const [textEntropy, setTextEntropy] = useState(null);
     const [queueState, setQueueState] = useState(null);
-    const [userState, setUserState] = useState(null);
+    const [queuePosition, setQueuePosition] = useState(new Map());
+    const [userState, setUserState] = useState(new Map());
     const [listContribution, setListContribution] = useState([]);
 
     const queueStateRef = useRef();
     queueStateRef.current = queueState;
+ 
+    const queuePositionRef = useRef();
+    queuePositionRef.current = queuePosition;
 
     if (queueState === null) {
         getQueue(setQueueState);
@@ -65,7 +69,7 @@ export default function Contribute() {
                 Get in line to contribute
             </h2>
 
-            {queueState != null && (
+            {queueState != null && currentAccount && (
             <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
                 There are currently {queueState.tail - queueState.head} contributors in the queue.
             </h3>
@@ -113,7 +117,7 @@ export default function Contribute() {
                 Contribute by one of the following options:
             </h3>
 
-            {userState != null && (
+            {currentAccount && userState.get(currentAccount.address) === 1 && (
                 <Alert>
                     <Terminal className="h-4 w-4" />
                     <AlertTitle>Contribution warning</AlertTitle>
@@ -129,7 +133,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null || textEntropy == null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, textEntropy, queueStateRef, setUserState, setListContribution) } >
+                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, textEntropy, queueStateRef, queuePositionRef, setQueuePosition, setUserState, setListContribution) } >
                             Contribute in browser with snarkjs
                         </Button>
                     </div>
@@ -139,7 +143,7 @@ export default function Contribute() {
             {/* <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null || textEntropy == null} onClick={ async () => await contributeViaDocker("snarkjs", currentAccount, textEntropy, signMessage, setUserState) } >
+                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeViaDocker("snarkjs", currentAccount, textEntropy, signMessage, setUserState) } >
                             Contribute in docker with snarkjs
                         </Button>
                     </div>
@@ -149,7 +153,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null || textEntropy == null} onClick={ async () => await contributeViaDocker("kobi", currentAccount, textEntropy, signMessage, setUserState) } >
+                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeViaDocker("kobi", currentAccount, textEntropy, signMessage, setUserState) } >
                             Contribute in docker with Kobi's phase2-bn254
                         </Button>
                     </div>
