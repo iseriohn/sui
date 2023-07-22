@@ -57,7 +57,7 @@ async function startContribution(currentAccount, signMessage, entropy, params, s
     httpRep.onreadystatechange = async (e) => {
         if (httpRep.readyState === 4 && httpRep.status === 200) {
             if (JSON.parse(httpRep.responseText).hasOwnProperty("error")) {
-                alert(httpRep.responseText);
+                alert(currentAccount.address + ": " + httpRep.responseText);
             } else {
                 const contribution = {
                     "index": JSON.parse(httpRep.responseText).result.index,
@@ -67,10 +67,12 @@ async function startContribution(currentAccount, signMessage, entropy, params, s
                     "sig": sigRep.signature,
                 }
                 setListContribution((listContribution: any) => [...listContribution, contribution]);
-                alert("Successfully recorded #" + contribution.index + " contribution");
+                alert(currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
             }
+            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+        } else if (httpRep.status !== 200) {
+            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
         }
-        setUserState(preState => new Map(preState.set(currentAccount.address, null)));
     }
 }
 
@@ -99,42 +101,44 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
         if (http.readyState === 4 && http.status === 200) {
             var responseText = JSON.parse(http.responseText);
             if (responseText.hasOwnProperty("error")) {
-                alert(http.responseText);
+                alert(currentAccount.address + ": " + http.responseText);
                 setUserState(preState => new Map(preState.set(currentAccount.address, null)));
                 return;
             }
 
             setQueuePosition(preState => new Map(preState.set(currentAccount.address, responseText.result.queue_position)));
-            alert("Added in queue #" + responseText.result.queue_position.toString() + "; wait for " + (responseText.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
+            alert(currentAccount.address + ": " + "Added in queue #" + responseText.result.queue_position.toString() + "; wait for " + (responseText.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
             if (responseText.result.params.length == 0) {
                 var setIntervalID = setInterval(async function () {
-                    const joinQueueHttp = await httpCall(joinQueueQuery);
-                    joinQueueHttp.onreadystatechange = async (e) => {
-                        if (joinQueueHttp.readyState === 4 && joinQueueHttp.status === 200) {
-                            var responseText = JSON.parse(joinQueueHttp.responseText);
-                            if (responseText.hasOwnProperty("error")) {
-                                clearInterval(setIntervalID);
-                                alert(joinQueueHttp.responseText);
-                                setUserState(preState => new Map(preState.set(currentAccount.address, null)));
-                                return;
-                            }
+                    if (queueStateRef.current.head + 1 >= queuePositionRef.current.get(currentAccount.address)) {
+                        const joinQueueHttp = await httpCall(joinQueueQuery);
+                        joinQueueHttp.onreadystatechange = async (e) => {
+                            if (joinQueueHttp.readyState === 4 && joinQueueHttp.status === 200) {
+                                var responseText = JSON.parse(joinQueueHttp.responseText);
+                                if (responseText.hasOwnProperty("error")) {
+                                    clearInterval(setIntervalID);
+                                    alert(currentAccount.address + ": " + joinQueueHttp.responseText);
+                                    setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+                                    return;
+                                }
+    
+                                if (responseText.result.queue_position != queuePositionRef.current.get(currentAccount.address)) {
+                                    alert(currentAccount.address + ": " + "Missed slot #" + queuePositionRef.current.get(currentAccount.address).toString() + "; assigned new slot #" + responseText.result.queue_position.toString() + "; wait for " + (responseText.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
+                                    setQueuePosition(preState => new Map(preState.set(currentAccount.address, responseText.result.queue_position)));
+                                }
 
-                            if (responseText.result.queue_position != queuePositionRef.current.get(currentAccount.address)) {
-                                alert("Missed slot #" + queuePositionRef.current.get(currentAccount.address).toString() + "; assigned new slot #" + responseText.result.queue_position.toString() + "; wait for " + (responseText.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
-                            }
-
-                            setQueuePosition(preState => new Map(preState.set(currentAccount.address, responseText.result.queue_position)));
-                            if (queueStateRef.current.head == responseText.result.queue_position) {
-                                clearInterval(setIntervalID);
-                                await startContribution(currentAccount, signMessage, entropy, responseText.result.params, setUserState, setListContribution);
+                                if (queueStateRef.current.head + 1 == queuePositionRef.current.get(currentAccount.address)) {
+                                    clearInterval(setIntervalID);
+                                    await startContribution(currentAccount, signMessage, entropy, responseText.result.params, setUserState, setListContribution);
+                                }
                             }
                         }
                     }
-                }, refreshTime);
+              }, refreshTime);
             } else {
                 await startContribution(currentAccount, signMessage, entropy, responseText.result.params, setUserState, setListContribution);
             }
-        } else {
+        } else if (http.status !== 200) {
             setUserState(preState => new Map(preState.set(currentAccount.address, null)));
         }
     }
