@@ -27,7 +27,7 @@ async function register(currentAccount, signMessage) {
 		id: 1
 	});
 
-	var Http = await httpCall(msg);
+	var Http = httpCall(msg);
 	Http.onreadystatechange = (e) => {
 		if (Http.readyState === 4 && Http.status === 200) {
 			alert(Http.responseText);

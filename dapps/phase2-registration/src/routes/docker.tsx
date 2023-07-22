@@ -30,7 +30,7 @@ export async function contributeViaDocker(repo, currentAccount, entropy, signMes
     });
 
 
-    var http = await httpCall(msg);
+    var http = httpCall(msg);
     http.onreadystatechange = (e) => {
         if (http.readyState === 4 && http.status === 200) {
             alert(http.responseText);

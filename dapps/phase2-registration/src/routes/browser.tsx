@@ -53,7 +53,7 @@ async function startContribution(currentAccount, signMessage, entropy, params, s
         id: 1
     });
 
-    const httpRep = await httpCall(msgContribute);
+    const httpRep = httpCall(msgContribute);
     httpRep.onreadystatechange = async (e) => {
         if (httpRep.readyState === 4 && httpRep.status === 200) {
             if (JSON.parse(httpRep.responseText).hasOwnProperty("error")) {
@@ -96,7 +96,7 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
         id: 1
     });
 
-    const http = await httpCall(joinQueueQuery);
+    const http = httpCall(joinQueueQuery);
     http.onreadystatechange = async (e) => {
         if (http.readyState === 4 && http.status === 200) {
             var responseText = JSON.parse(http.responseText);
@@ -111,7 +111,7 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
             if (responseText.result.params.length == 0) {
                 var setIntervalID = setInterval(async function () {
                     if (queueStateRef.current.head + 1 >= queuePositionRef.current.get(currentAccount.address)) {
-                        const joinQueueHttp = await httpCall(joinQueueQuery);
+                        const joinQueueHttp = httpCall(joinQueueQuery);
                         joinQueueHttp.onreadystatechange = async (e) => {
                             if (joinQueueHttp.readyState === 4 && joinQueueHttp.status === 200) {
                                 var responseText = JSON.parse(joinQueueHttp.responseText);
@@ -134,7 +134,7 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                             }
                         }
                     }
-              }, refreshTime);
+                }, refreshTime);
             } else {
                 await startContribution(currentAccount, signMessage, entropy, responseText.result.params, setUserState, setListContribution);
             }
