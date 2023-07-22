@@ -6,7 +6,7 @@ const dockerFileFront =
 const dockerFileBack = 
 "\nENV COMMAND=\"cargo run --release -p client ${ADDR} ${ATTESTATION_KEY} ${OPTION} ${ENTROPY}\" \n#RUN git clone https://github.com/MystenLabs/ts-coordinator.git \nRUN wget http://185.209.177.123:8099/ts-coordinator.zip \nRUN unzip ts-coordinator.zip \nWORKDIR /ts-coordinator \nRUN ${COMMAND}";
 
-export async function contributeViaDocker(repo, currentAccount, signMessage, setUserState) {
+export async function contributeViaDocker(repo, currentAccount, entropy, signMessage, setUserState) {
     setUserState(1);
     var addr = currentAccount.address;
     var ephemeralKey = Ed25519Keypair.generate();
@@ -36,8 +36,6 @@ export async function contributeViaDocker(repo, currentAccount, signMessage, set
             alert(http.responseText);
             var responseText = JSON.parse(http.responseText);
             if (responseText.hasOwnProperty("result")) {
-                let entropy = prompt("Please enter random text to add entropy in contribution", "");
-            
                 var text = dockerFileFront + "\nENV ADDR=" + addr;
                 text = text + "\nENV ATTESTATION_KEY=" + toB64(ephemeralKey.keypair.secretKey);
                 text = text + "\nENV OPTION=" + repo;

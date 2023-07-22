@@ -27,7 +27,8 @@ async function runSNARKJS(params, index) {
     return { params: [].slice.call(response), hash: [].slice.call(contributionHash) };
 }
 
-export async function contributeInBrowser(currentAccount, signMessage, setUserState, setListContribution) {
+export async function contributeInBrowser(currentAccount, signMessage, entropy, queueStateRef, setUserState, setListContribution) {
+    setUserState(1);
     var addr = currentAccount.address;
     var pk = toB64(currentAccount.publicKey);
     var toSign = joinQueueMsg(addr, pk);
@@ -46,7 +47,8 @@ export async function contributeInBrowser(currentAccount, signMessage, setUserSt
         id: 1
     });
 
-    setUserState(1);
+    
+
     var getInQueueId = setInterval(async function join() {
         const http = await httpCall(msg);
         http.onreadystatechange = async (e) => {

@@ -7,15 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { refreshTime } from './utils';
 import { contributeInBrowser } from './browser';
 import { contributeViaDocker } from './docker';
 import { getQueue } from './queue';
+import { addEntropy } from './entropy';
 
 function Contribution({ contribution }) {
     console.log(contribution);
+
     return (
         <Card>
             <CardHeader>
@@ -44,9 +46,13 @@ function Contribution({ contribution }) {
 
 export default function Contribute() {
     const { currentAccount, signMessage } = useWalletKit();
+    const [textEntropy, setTextEntropy] = useState(null);
     const [queueState, setQueueState] = useState(null);
     const [userState, setUserState] = useState(null);
     const [listContribution, setListContribution] = useState([]);
+
+    const queueStateRef = useRef();
+    queueStateRef.current = queueState;
 
     if (queueState === null) {
         getQueue(setQueueState);
@@ -83,6 +89,26 @@ export default function Contribute() {
                 </div>
             </Tabs>
 
+            {textEntropy == null && (
+                <Alert>
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Entropy Required</AlertTitle>
+                    <AlertDescription>
+                        Contributing requires you to enter entropy.
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            <Tabs className="w-full">
+                <div className="flex flex-col items-start gap-4">
+                    <div className="flex gap-4">
+                        <Button disabled={textEntropy != null} onClick={async () => await addEntropy(setTextEntropy)} >
+                            Add entropy
+                        </Button>
+                    </div>
+                </div>
+            </Tabs>
+
             <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
                 Contribute by one of the following options:
             </h3>
@@ -103,7 +129,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, setUserState, setListContribution)} >
+                        <Button disabled={!currentAccount || userState != null || textEntropy == null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, textEntropy, queueStateRef, setUserState, setListContribution) } >
                             Contribute in browser with snarkjs
                         </Button>
                     </div>
@@ -113,7 +139,7 @@ export default function Contribute() {
             {/* <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null} onClick={async () => await contributeViaDocker("snarkjs", currentAccount, signMessage, setUserState)} >
+                        <Button disabled={!currentAccount || userState != null || textEntropy == null} onClick={ async () => await contributeViaDocker("snarkjs", currentAccount, textEntropy, signMessage, setUserState) } >
                             Contribute in docker with snarkjs
                         </Button>
                     </div>
@@ -123,7 +149,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState != null} onClick={async () => await contributeViaDocker("kobi", currentAccount, signMessage, setUserState)} >
+                        <Button disabled={!currentAccount || userState != null || textEntropy == null} onClick={ async () => await contributeViaDocker("kobi", currentAccount, textEntropy, signMessage, setUserState) } >
                             Contribute in docker with Kobi's phase2-bn254
                         </Button>
                     </div>
