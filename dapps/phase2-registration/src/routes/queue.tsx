@@ -1,4 +1,4 @@
-import { httpCall } from './utils';
+import { fetchCall } from './utils';
 
 export async function getQueue(setQueueState) {
     var msg = JSON.stringify({
@@ -7,11 +7,9 @@ export async function getQueue(setQueueState) {
         id: 1
     });
 
-    var Http = httpCall(msg);
-    Http.onreadystatechange = (e) => {
-        if (Http.readyState === 4 && Http.status === 200) {
-            console.log(JSON.parse(Http.responseText).result);
-            setQueueState(JSON.parse(Http.responseText).result);
-        }
+    const [http, res] = await fetchCall(msg);
+    if (http) {
+        console.log(res.result);
+        setQueueState(res.result);
     }
 }

@@ -1,7 +1,6 @@
 import { bcs } from "@mysten/sui.js";
 import { saveAs } from 'file-saver';
-
-export const refreshTime = 2.5 * 1000; // Refresh every MONITOR/4 seconds;
+import { URL } from './config';
 
 export function registrationMsg(addr) {
     return "I register to contribute to Phase2 Ceremony with address " + addr;
@@ -14,7 +13,7 @@ export function joinQueueMsg(addr, pk) {
 export function contributeMsg(addr, params) {
     var msg = "I contribute with address " + addr;
     for (const [index, param] of params.entries()) {
-        msg = msg + ' #' + (index+1).toString() +' contribution hash: "' + param + '"';
+        msg = msg + ' #' + (index + 1).toString() + ' contribution hash: "' + param + '"';
     }
     return msg;
 }
@@ -30,20 +29,28 @@ export function downloadScript(fileName, text) {
     saveAs(blob, fileName);
 }
 
-export function httpCall(msg) {
-    console.log("to send query params:", msg);
-    const Http = new XMLHttpRequest();
-    // const url = 'http://localhost:37681';
-    const url = 'https://record.sui-phase2-ceremony.iseriohn.com';
-    Http.open("POST", url);
-    Http.timeout = 2000;
-    Http.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
-    Http.setRequestHeader("Access-Control-Allow-Origin", "*.sui-phase2-ceremony.iseriohn.com");
-    Http.setRequestHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    Http.setRequestHeader("Access-Control-Allow-Headers", "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS");
-    Http.send(msg);
+export async function fetchCall(data) {
+    const http = await fetch(URL, {
+        method: "POST",
+        mode: "cors",
+        credentials: "omit",
+        headers: {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Access-Control-Allow-Origin": "*.sui-phase2-ceremony.iseriohn.com",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS",
+        },
+        redirect: "follow",
+        referrerPolicy: "strict-origin-when-cross-origin",
+        body: data,
+    });
 
-    return Http;
+    if (http.ok) {
+        const response = await http.json();
+        return [true, response];
+    } else {
+        return [false, null];
+    }
 }
 
 export async function generateSignature(signMessage, msg) {

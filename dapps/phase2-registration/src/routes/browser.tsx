@@ -1,41 +1,35 @@
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
-import * as fastFile from "fastfile";
-import { toB64 } from '@mysten/sui.js';
-import { refreshTime, joinQueueMsg, contributeMsg, httpCall, generateSignature } from './utils';
+import { toB64, fromB64 } from '@mysten/sui.js';
+import { joinQueueMsg, contributeMsg, fetchCall, generateSignature } from './utils';
+import { refreshTime } from './config';
 
-async function runSNARKJS(params, index, entropy) {
-    const oldParams = { type: "mem" };
-    const fdTo = await fastFile.createOverride(oldParams);
-    fdTo.write(Uint8Array.from(params));
-    await fdTo.close();
+async function runSNARKJS(params, entropy) {
+    const oldParams = { type: "mem", data: Uint8Array.from(fromB64(params)) };
     const newParams = { type: "mem" };
     const curve = await ffjavascript.buildBn128();
-    const startingTime = (new Date()).getTime();
     const contributionHash = await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams, entropy);
-    const endingTime = (new Date()).getTime();
 
-    const elapsedTime = (endingTime - startingTime) / 1000.;
-    const msg = "The time it takes to contribute for circuit #" + index + " is " + elapsedTime.toString() + "s";
-    alert(msg);
-
-    const fdFrom = await fastFile.readExisting(newParams);
-    const response = await fdFrom.read(fdFrom.totalSize, 0);
-    fdFrom.close();
-    return { params: [].slice.call(response), hash: [].slice.call(contributionHash) };
+    return [newParams.data, contributionHash];
 }
 
-async function startContribution(currentAccount, signMessage, entropy, params, setUserState, setListContribution) {
+async function startContribution(currentAccount, signMessage, entropy, old_params, setUserState, setListContribution) {
     var new_params = [];
     var hashes: string[] = [];
     var index = 0;
-    for (const param of params) {
+    for (const old_param of old_params) {
         index += 1;
-        var res = await runSNARKJS(param, index, "Circuit#" + index.toString() + ": " + entropy)
-        new_params.push(res.params);
-        hashes.push(Buffer.from(res.hash).toString('hex'));
+        alert("Starting contribution to circuit #" + index.toString());
+        const startingTime = (new Date()).getTime();
+        const [new_param, hash] = await runSNARKJS(old_param, "Circuit#" + index.toString() + ": " + entropy)
+        const endingTime = (new Date()).getTime();
+        alert("The time it takes to contribute for circuit #" + index + " is " + ((endingTime - startingTime)/1000.).toString() + "s");
+        new_params.push(toB64(new_param));
+        console.log("hi");
+        hashes.push(Buffer.from(hash).toString('hex'));
     }
 
+    console.log("finish hash");
     var toSignRep = contributeMsg(currentAccount.address, hashes);
     console.log("toSign", toSignRep);
     var sigRep = await generateSignature(signMessage, toSignRep);
@@ -53,26 +47,26 @@ async function startContribution(currentAccount, signMessage, entropy, params, s
         id: 1
     });
 
-    const httpRep = httpCall(msgContribute);
-    httpRep.onreadystatechange = async (e) => {
-        if (httpRep.readyState === 4 && httpRep.status === 200) {
-            if (JSON.parse(httpRep.responseText).hasOwnProperty("error")) {
-                alert(currentAccount.address + ": " + httpRep.responseText);
-            } else {
-                const contribution = {
-                    "index": JSON.parse(httpRep.responseText).result.index,
-                    "address": currentAccount.address,
-                    "pk": toB64(currentAccount.publicKey),
-                    "hash": hashes,
-                    "sig": sigRep.signature,
-                }
-                setListContribution((listContribution: any) => [...listContribution, contribution]);
-                alert(currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
+    alert("Now submitting contributions and waiting for verification...");
+    const [http, res] = await fetchCall(msgContribute);
+    if (http) {
+        if (res.hasOwnProperty("error")) {
+            alert(currentAccount.address + ": " + JSON.stringify(res));
+        } else {
+            const contribution = {
+                "index": res.result.index,
+                "address": currentAccount.address,
+                "pk": toB64(currentAccount.publicKey),
+                "hash": hashes,
+                "sig": sigRep.signature,
             }
-            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
-        } else if (httpRep.status !== 200) {
-            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+            setListContribution((listContribution: any) => [...listContribution, contribution]);
+            alert(currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
         }
+        setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+    } else {
+        alert("Error occurred, please try again");
+        setUserState(preState => new Map(preState.set(currentAccount.address, null)));
     }
 }
 
@@ -96,50 +90,44 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
         id: 1
     });
 
-    const http = httpCall(joinQueueQuery);
-    http.onreadystatechange = async (e) => {
-        if (http.readyState === 4 && http.status === 200) {
-            var responseText = JSON.parse(http.responseText);
-            if (responseText.hasOwnProperty("error")) {
-                alert(currentAccount.address + ": " + http.responseText);
-                setUserState(preState => new Map(preState.set(currentAccount.address, null)));
-                return;
-            }
+    const [http, res] = await fetchCall(joinQueueQuery);
+    if (http) {
+        if (res.hasOwnProperty("error")) {
+            alert(currentAccount.address + ": " + JSON.stringify(res));
+            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+            return;
+        }
+        setQueuePosition(preState => new Map(preState.set(currentAccount.address, res.result.queue_position)));
+        alert(currentAccount.address + ": " + "Added in queue #" + res.result.queue_position.toString() + "; wait for " + (res.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
+        if (res.result.params.length == 0) {
+            var setIntervalID = setInterval(async function () {
+                if (queueStateRef.current.head + 1 >= queuePositionRef.current.get(currentAccount.address)) {
+                    const [joinQueueHttp, joinQueueRes] = await fetchCall(joinQueueQuery);
+                    if (joinQueueHttp) {
+                        if (joinQueueRes.hasOwnProperty("error")) {
+                            clearInterval(setIntervalID);
+                            alert(currentAccount.address + ": " + JSON.stringify(joinQueueRes));
+                            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+                            return;
+                        }
 
-            setQueuePosition(preState => new Map(preState.set(currentAccount.address, responseText.result.queue_position)));
-            alert(currentAccount.address + ": " + "Added in queue #" + responseText.result.queue_position.toString() + "; wait for " + (responseText.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
-            if (responseText.result.params.length == 0) {
-                var setIntervalID = setInterval(async function () {
-                    if (queueStateRef.current.head + 1 >= queuePositionRef.current.get(currentAccount.address)) {
-                        const joinQueueHttp = httpCall(joinQueueQuery);
-                        joinQueueHttp.onreadystatechange = async (e) => {
-                            if (joinQueueHttp.readyState === 4 && joinQueueHttp.status === 200) {
-                                var responseText = JSON.parse(joinQueueHttp.responseText);
-                                if (responseText.hasOwnProperty("error")) {
-                                    clearInterval(setIntervalID);
-                                    alert(currentAccount.address + ": " + joinQueueHttp.responseText);
-                                    setUserState(preState => new Map(preState.set(currentAccount.address, null)));
-                                    return;
-                                }
-    
-                                if (responseText.result.queue_position != queuePositionRef.current.get(currentAccount.address)) {
-                                    alert(currentAccount.address + ": " + "Missed slot #" + queuePositionRef.current.get(currentAccount.address).toString() + "; assigned new slot #" + responseText.result.queue_position.toString() + "; wait for " + (responseText.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
-                                    setQueuePosition(preState => new Map(preState.set(currentAccount.address, responseText.result.queue_position)));
-                                }
+                        if (joinQueueRes.result.queue_position != queuePositionRef.current.get(currentAccount.address)) {
+                            alert(currentAccount.address + ": " + "Missed slot #" + queuePositionRef.current.get(currentAccount.address).toString() + "; assigned new slot #" + joinQueueRes.result.queue_position.toString() + "; wait for " + (joinQueueRes.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
+                            setQueuePosition(preState => new Map(preState.set(currentAccount.address, joinQueueRes.result.queue_position)));
+                        }
 
-                                if (queueStateRef.current.head + 1 == queuePositionRef.current.get(currentAccount.address)) {
-                                    clearInterval(setIntervalID);
-                                    await startContribution(currentAccount, signMessage, entropy, responseText.result.params, setUserState, setListContribution);
-                                }
-                            }
+                        if (queueStateRef.current.head + 1 == queuePositionRef.current.get(currentAccount.address)) {
+                            clearInterval(setIntervalID);
+                            await startContribution(currentAccount, signMessage, entropy, joinQueueRes.result.params, setUserState, setListContribution);
                         }
                     }
-                }, refreshTime);
-            } else {
-                await startContribution(currentAccount, signMessage, entropy, responseText.result.params, setUserState, setListContribution);
-            }
-        } else if (http.status !== 200) {
-            setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+                }
+            }, refreshTime);
+        } else {
+            await startContribution(currentAccount, signMessage, entropy, res.result.params, setUserState, setListContribution);
         }
+    } else {
+        alert("Error occurred, please try again");
+        setUserState(preState => new Map(preState.set(currentAccount.address, null)));
     }
 }

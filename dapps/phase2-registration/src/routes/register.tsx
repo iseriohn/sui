@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
-import { registrationMsg, httpCall, generateSignature } from './utils';
+import { registrationMsg, fetchCall, generateSignature } from './utils';
 
 async function register(currentAccount, signMessage) {
 	var addr = currentAccount.address;
@@ -27,11 +27,9 @@ async function register(currentAccount, signMessage) {
 		id: 1
 	});
 
-	var Http = httpCall(msg);
-	Http.onreadystatechange = (e) => {
-		if (Http.readyState === 4 && Http.status === 200) {
-			alert(Http.responseText);
-		}
+	const [http, res] = await fetchCall(msg);
+	if (http) {
+		alert(JSON.stringify(res));
 	}
 }
 
