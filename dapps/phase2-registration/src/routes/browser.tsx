@@ -5,7 +5,7 @@ import { joinQueueMsg, contributeMsg, fetchCall, generateSignature } from './uti
 import { refreshTime } from './config';
 
 async function runSNARKJS(params, entropy) {
-    const oldParams = { type: "mem", data: Uint8Array.from(fromB64(params)) };
+    const oldParams = { type: "mem", data: params };
     const newParams = { type: "mem" };
     const curve = await ffjavascript.buildBn128();
     const contributionHash = await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams, entropy);
@@ -14,17 +14,22 @@ async function runSNARKJS(params, entropy) {
 }
 
 async function startContribution(currentAccount, signMessage, entropy, old_params, setUserState, setListContribution) {
-    var new_params = [];
+    var response = {
+        "address": currentAccount.address,
+        "params": [],
+    }
+
     var hashes: string[] = [];
-    var index = 0;
-    for (const old_param of old_params) {
-        index += 1;
+    console.log(old_params);
+    for (var index = 1; index <= old_params.length; ++index) {
         alert("Starting contribution to circuit #" + index.toString());
         const startingTime = (new Date()).getTime();
-        const [new_param, hash] = await runSNARKJS(old_param, "Circuit#" + index.toString() + ": " + entropy)
+        //const [new_param, hash] = await runSNARKJS(fromB64(old_params[index - 1]), "Circuit#" + index.toString() + ": " + entropy)
+        new_param = toB64(fromB64(old_params[index-1]));
         const endingTime = (new Date()).getTime();
         alert("The time it takes to contribute for circuit #" + index + " is " + ((endingTime - startingTime)/1000.).toString() + "s");
-        new_params.push(toB64(new_param));
+        old_params[index - 1] = "";
+        response.params.push(toB64(new_param));
         console.log("hi");
         hashes.push(Buffer.from(hash).toString('hex'));
     }
@@ -33,13 +38,10 @@ async function startContribution(currentAccount, signMessage, entropy, old_param
     var toSignRep = contributeMsg(currentAccount.address, hashes);
     console.log("toSign", toSignRep);
     var sigRep = await generateSignature(signMessage, toSignRep);
-
-    const response = {
-        "address": currentAccount.address,
-        "msg": toSignRep,
-        "sig": sigRep.signature,
-        "params": new_params,
-    }
+    
+    response.msg = toSignRep;
+    response.sig = sigRep.signature;
+    
     const msgContribute = JSON.stringify({
         jsonrpc: '2.0',
         method: 'contribute',
