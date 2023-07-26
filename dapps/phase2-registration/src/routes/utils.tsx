@@ -35,8 +35,8 @@ export async function fetchCall(data) {
         mode: "cors",
         credentials: "omit",
         headers: {
-            "Content-Type": "application/json; charset=UTF-8",
-            "Access-Control-Allow-Origin": "*.sui-phase2-ceremony.iseriohn.com",
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "CONTENT_TYPE, ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS",
         },
@@ -45,6 +45,7 @@ export async function fetchCall(data) {
         body: data,
     });
 
+    console.log(http);
     if (http.ok) {
         const response = await http.json();
         return [true, response];
@@ -53,10 +54,37 @@ export async function fetchCall(data) {
     }
 }
 
+
+// export async function fetchCall(endpoint, data) {
+//     console.log(URL + endpoint);
+//     const http = await fetch(URL + endpoint, {
+//         method: "POST",
+//         mode: "cors",
+//         credentials: "omit",
+//         headers: {
+//             "Content-Type": "application/octet-stream",
+//             "Access-Control-Allow-Origin": "*",
+//             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+//             "Access-Control-Allow-Headers": "ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS",
+//         },
+//         redirect: "follow",
+//         referrerPolicy: "strict-origin-when-cross-origin",
+//         body: data,
+//     });
+
+//     console.log(http);
+//     if (http.ok) {
+//         const response = new Uint8Array(await http.arrayBuffer());
+//         return [true, response];
+//     } else {
+//         return [false, null];
+//     }
+// }
+
 export async function generateSignature(signMessage, msg) {
-    let bytes = new TextEncoder().encode(msg);
-    const serialized_msg = bcs.ser(['vector', 'u8'], bytes).toBytes();
-    // const serialized_msg = new TextEncoder().encode(msg);
+    // let bytes = new TextEncoder().encode(msg);
+    // const serialized_msg = bcs.ser(['vector', 'u8'], bytes).toBytes();
+    const serialized_msg = new TextEncoder().encode(msg);
     console.log(serialized_msg);
     let sig = await signMessage({ message: serialized_msg });
     return sig;
