@@ -1,4 +1,3 @@
-import { bcs } from "@mysten/sui.js";
 import { saveAs } from 'file-saver';
 import { URL } from './config';
 

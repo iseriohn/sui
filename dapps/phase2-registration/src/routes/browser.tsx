@@ -5,74 +5,59 @@ import { joinQueueMsg, contributeMsg, fetchCall, generateSignature } from './uti
 import { numChunk, refreshTime } from './config';
 import { Buffer } from 'buffer';
 
-const response = {};
-const new_params = [];
-const account = {};
-const hashes = [];
-const signMsg = {};
-const setList = {};
-const setState = {};
+async function submitInChunks(currentAccount, signMessage, response, new_params, hashes, setUserState, setListContribution) {
+    var toSignRep = contributeMsg(currentAccount.address, hashes);
+    console.log("toSign", toSignRep);
+    var sigRep = await generateSignature(signMessage, toSignRep);
 
-const gcState = {
-    httpResponse: false,
-}
+    response.msg = toSignRep;
+    response.sig = sigRep.signature;
 
-const registry = new FinalizationRegistry(async (gcObject) => {
-    gcState[gcObject] = true;
+    alert("Now submitting contributions and waiting for verification...");
 
-    if (gcState.httpResponse) {
+    for (var chunk_num = 0; chunk_num < numChunk; ++chunk_num) {
+        response.params = [];
+        for (var index = 0; index < new_params.length; ++index) {
+            const chunk_size = Math.ceil(new_params[index].length / numChunk) + 1;
+            const start = chunk_num * chunk_size;
+            const end = Math.min(new_params[index].length, start + chunk_size);
+            response.params.push(toB64New(new_params[index].subarray(start, end)));
+        }
+        response.index = chunk_num + 1;
+        console.log(response);
 
-        var toSignRep = contributeMsg(account.currentAccount.address, hashes);
-        console.log("toSign", toSignRep);
-        var sigRep = await generateSignature(signMsg.signMessage, toSignRep);
+        const msgContribute = JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'contribute',
+            params: [response],
+            id: 1
+        });
 
-        response.msg = toSignRep;
-        response.sig = sigRep.signature;
-
-        alert("Now submitting contributions and waiting for verification...");
-
-        for (var chunk_num = 0; chunk_num < numChunk; ++chunk_num) {
-            for (var index = 0; index < response.params.length; ++index) {
-                const chunk_size = Math.ceil(new_params[index].data.length / numChunk) + 1;
-                const start = chunk_num * chunk_size;
-                const end = Math.min(new_params[index].data.length, start + chunk_size);
-                response.params[index] = toB64New(new_params[index].data.subarray(start, end));
-            }
-            response.index = chunk_num + 1;
-
-            const msgContribute = JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'contribute',
-                params: [response],
-                id: 1
-            });
-
-            const [httpContribute, resContribute] = await fetchCall(msgContribute);
-            if (httpContribute) {
-                if (resContribute.hasOwnProperty("error")) {
-                    alert(account.currentAccount.address + ": " + JSON.stringify(resContribute));
-                    break;
-                }
-            } else {
-                alert("Error occurred, please refresh the page and try again");
+        const [httpContribute, resContribute] = await fetchCall(msgContribute);
+        if (httpContribute) {
+            if (resContribute.hasOwnProperty("error")) {
+                alert(currentAccount.address + ": " + JSON.stringify(resContribute));
                 break;
             }
-            if (chunk_num == numChunk - 1) {
-                const contribution = {
-                    "index": resContribute.result.index,
-                    "address": account.currentAccount.address,
-                    "pk": toB64(account.currentAccount.publicKey),
-                    "hash": hashes,
-                    "sig": sigRep.signature,
-                }
-
-                setList.setListContribution((listContribution: any) => [...listContribution, contribution]);
-                alert(account.currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
-            }
+        } else {
+            alert("Error occurred, please refresh the page and try again");
+            break;
         }
-        setState.setUserState(preState => new Map(preState.set(account.currentAccount.address, null)));
+        if (chunk_num == numChunk - 1) {
+            const contribution = {
+                "index": resContribute.result.index,
+                "address": currentAccount.address,
+                "pk": toB64(currentAccount.publicKey),
+                "hash": hashes,
+                "sig": sigRep.signature,
+            }
+
+            setListContribution((listContribution: any) => [...listContribution, contribution]);
+            alert(currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
+        }
     }
-});
+    setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+}
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -118,14 +103,12 @@ function toB64New(aBytes: Uint8Array): string {
 
 async function runSNARKJS(params, entropy) {
     const oldParams = { type: "mem", data: params };
-    registry.register(oldParams, 'oldParams');
     const newParams = { type: "mem" };
     const curve = await ffjavascript.buildBn128();
-    registry.register(curve, 'curve');
     const contributionHash = await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams, entropy);
 
     await curve.terminate();
-    return [newParams, contributionHash];
+    return [newParams.data, contributionHash];
 }
 
 export async function contributeInBrowser(currentAccount, signMessage, entropy, queueStateRef, queuePositionRef, setQueuePosition, setUserState, setListContribution) {
@@ -148,7 +131,8 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
         id: 1
     });
 
-    var http, res;
+    var http, res, new_params, hashes;
+    const contributionParams = { address: currentAccount.address };
     while (true) {
         if (queuePositionRef.current.get(currentAccount.address) == null || queueStateRef.current.head + 1 >= queuePositionRef.current.get(currentAccount.address)) {
             [http, res] = await fetchCall(joinQueueQuery);
@@ -168,32 +152,21 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                 }
 
                 if (res.result.params.length > 0) {
-                    const old_param = res;
-                    registry.register(old_param, 'httpResponse');
-
-                    response.address = currentAccount.address;
-                    response.params = [];
+                    new_params = [];
+                    hashes = [];
 
                     for (var index = 0; index < res.result.params.length; ++index) {
-                        response.params.push("");
-                    }
-
-                    for (var index = 1; index <= res.result.params.length; ++index) {
-                        alert("Starting contribution to circuit #" + index.toString());
+                        alert("Starting contribution to circuit #" + (index + 1).toString());
                         const startingTime = (new Date()).getTime();
-                        const [new_param, hash] = await runSNARKJS(fromB64(res.result.params[index - 1]), "Circuit#" + index.toString() + ": " + entropy)
+                        const [new_param, hash] = await runSNARKJS(fromB64(res.result.params[index]), "Circuit#" + (index + 1).toString() + ": " + entropy)
                         const endingTime = (new Date()).getTime();
-                        alert("The time it takes to contribute for circuit #" + index + " is " + ((endingTime - startingTime) / 1000.).toString() + "s");
+                        alert("The time it takes to contribute for circuit #" + (index + 1).toString() + " is " + ((endingTime - startingTime) / 1000.).toString() + "s");
                         new_params.push(new_param);
                         hashes.push(Buffer.from(hash).toString('hex'));
                     }
 
-                    account.currentAccount = currentAccount;
-                    signMsg.signMessage = signMessage;
-                    setList.setListContribution = setListContribution;
-                    setState.setUserState = setUserState;
                     res = null;
-                    alert("Waiting for garbage collection and proceed to submit contribution");
+                    await submitInChunks(currentAccount, signMessage, contributionParams, new_params, hashes, setUserState, setListContribution);
                     break;
                 }
             } else {
