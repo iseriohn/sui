@@ -69,7 +69,7 @@ export default function Contribute() {
                 Get in line to contribute
             </h2>
 
-            {queueState != null && currentAccount && (
+            {queueState != null && (
             <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
                 There are currently {queueState.tail - queueState.head} contributors in the queue.
             </h3>
