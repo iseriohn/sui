@@ -114,7 +114,7 @@ export default function Contribute() {
             </Tabs>
 
             <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
-                Contribute by one of the following options:
+                Contribute by one of the following options (Please use WiFi):
             </h3>
 
             {currentAccount && userState.get(currentAccount.address) === 1 && (
