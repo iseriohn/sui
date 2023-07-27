@@ -8,9 +8,6 @@ import { Tabs } from '@/components/ui/tabs';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { Terminal } from 'lucide-react';
 import { registrationMsg, fetchCall, generateSignature } from './utils';
-import { bcs } from '@mysten/sui.js';
-import * as snarkjs from 'snarkjs';
-import * as ffjavascript from 'ffjavascript';
 
 async function register(currentAccount, signMessage) {
 	var addr = currentAccount.address;
@@ -73,51 +70,6 @@ export default function Register() {
 					</div>
 				</div>
 			</Tabs>
-
-			{/* <Tabs className="w-full">
-				<div className="flex flex-col items-start gap-4">
-					<div className="flex gap-4">
-						<Button onClick={async () => {
-							const a = new Uint8Array([48, 1, 2]);
-							let [http, res] = await fetchCall("/download", a);
-							console.log(http, res);
-
-							// bcs.registerStructType('JoinQueueResponse', {
-							// 	queue_position: 'u32',
-							// 	params: ['vector', 'vector<u8>'],
-							// });
-							// const response = bcs.de("JoinQueueResponse", res);
-							// res = null;
-							// console.log(response);
-
-							const oldParams = { type: "mem", data: res};
-							const newParams = { type: "mem" };
-							const curve = await ffjavascript.buildBn128();
-							const contributionHash = await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams);
-						
-
-							bcs.registerStructType('ContributeResponse', {
-								address: 'string',
-								msg: 'string',
-								sig: 'string',
-								params: ['vector', 'vector<u8>'],
-							});
-							const contribute = {
-								address: "hi",
-								msg: "hi",
-								sig: "hi",
-								params: [],
-							};
-							contribute.params.push(newParams.data);
-							console.log(contribute);
-							[http, res] = await fetchCall("/upload", bcs.ser("ContributeResponse", contribute, {maxSize: Math.pow(2, 31)}).toBytes());
-						}} >
-							HI!
-						</Button>
-					</div>
-				</div>
-			</Tabs> */}
-
 		</div>
 	);
 }

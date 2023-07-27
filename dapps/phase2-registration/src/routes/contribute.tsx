@@ -122,7 +122,7 @@ export default function Contribute() {
                     <Terminal className="h-4 w-4" />
                     <AlertTitle>Contribution warning</AlertTitle>
                     <AlertDescription>
-                        Please don't refresh the webpage once you choose to contribute in browser.
+                        Please don't refresh the webpage or switch wallet once you choose to contribute in browser.
                     </AlertDescription>
                     <AlertDescription>
                         To choose a different contribution method, refresh this page and connect your wallet.

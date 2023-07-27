@@ -1,11 +1,12 @@
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
-import { fromB64 } from '@mysten/sui.js';
+import { fromB64, toB64 } from '@mysten/sui.js';
 import { joinQueueMsg, contributeMsg, fetchCall, generateSignature } from './utils';
-import { refreshTime } from './config';
+import { numChunk, refreshTime } from './config';
 import { Buffer } from 'buffer';
 
 const response = {};
+const new_params = [];
 const account = {};
 const hashes = [];
 const signMsg = {};
@@ -14,20 +15,13 @@ const setState = {};
 
 const gcState = {
     httpResponse: false,
-    oldParams: false,
 }
 
 const registry = new FinalizationRegistry(async (gcObject) => {
-    alert("hello! " + gcObject);
     gcState[gcObject] = true;
-    console.log(gcState);
 
-    if (gcState.httpResponse && gcState.oldParams) {
-        for (var index = 0; index < response.params.length; ++index) {
-            response.params[index] = toB64(response.params[index].data);
-        }
+    if (gcState.httpResponse) {
 
-        console.log("finish hash");
         var toSignRep = contributeMsg(account.currentAccount.address, hashes);
         console.log("toSign", toSignRep);
         var sigRep = await generateSignature(signMsg.signMessage, toSignRep);
@@ -35,19 +29,35 @@ const registry = new FinalizationRegistry(async (gcObject) => {
         response.msg = toSignRep;
         response.sig = sigRep.signature;
 
-        const msgContribute = JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'contribute',
-            "params": [response],
-            id: 1
-        });
-
         alert("Now submitting contributions and waiting for verification...");
-        const [httpContribute, resContribute] = await fetchCall(msgContribute);
-        if (httpContribute) {
-            if (resContribute.hasOwnProperty("error")) {
-                alert(account.currentAccount.address + ": " + JSON.stringify(resContribute));
+
+        for (var chunk_num = 0; chunk_num < numChunk; ++chunk_num) {
+            for (var index = 0; index < response.params.length; ++index) {
+                const chunk_size = Math.ceil(new_params[index].data.length / numChunk) + 1;
+                const start = chunk_num * chunk_size;
+                const end = Math.min(new_params[index].data.length, start + chunk_size);
+                response.params[index] = toB64New(new_params[index].data.subarray(start, end));
+            }
+            response.index = chunk_num + 1;
+
+            const msgContribute = JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'contribute',
+                params: [response],
+                id: 1
+            });
+
+            const [httpContribute, resContribute] = await fetchCall(msgContribute);
+            if (httpContribute) {
+                if (resContribute.hasOwnProperty("error")) {
+                    alert(account.currentAccount.address + ": " + JSON.stringify(resContribute));
+                    break;
+                }
             } else {
+                alert("Error occurred, please refresh the page and try again");
+                break;
+            }
+            if (chunk_num == numChunk - 1) {
                 const contribution = {
                     "index": resContribute.result.index,
                     "address": account.currentAccount.address,
@@ -55,11 +65,10 @@ const registry = new FinalizationRegistry(async (gcObject) => {
                     "hash": hashes,
                     "sig": sigRep.signature,
                 }
+
                 setList.setListContribution((listContribution: any) => [...listContribution, contribution]);
                 alert(account.currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
             }
-        } else {
-            alert("Error occurred, please try again");
         }
         setState.setUserState(preState => new Map(preState.set(account.currentAccount.address, null)));
     }
@@ -83,10 +92,9 @@ function uint6ToB64(nUint6: number) {
                         : 65;
 }
 
-function toB64(aBytes: Uint8Array): string {
+function toB64New(aBytes: Uint8Array): string {
     var nMod3 = 2,
         sB64Enc = [''];
-    console.log("start");
     for (var nLen = aBytes.length, nUint24 = 0, nIdx = 0; nIdx < nLen; nIdx++) {
         nMod3 = nIdx % 3;
         if (nIdx % 10000000 == 0) {
@@ -104,10 +112,7 @@ function toB64(aBytes: Uint8Array): string {
         }
     }
 
-    console.log(sB64Enc[sB64Enc.length - 1]);
-    console.log("finish");
     sB64Enc[sB64Enc.length - 1] = sB64Enc[sB64Enc.length - 1].slice(0, 2 + nMod3) + (nMod3 === 2 ? '' : nMod3 === 1 ? '=' : '==');
-    console.log(sB64Enc);
     return sB64Enc.join("");
 }
 
@@ -119,6 +124,7 @@ async function runSNARKJS(params, entropy) {
     registry.register(curve, 'curve');
     const contributionHash = await snarkjs.zKey.bellmanContribute(curve, oldParams, newParams, entropy);
 
+    await curve.terminate();
     return [newParams, contributionHash];
 }
 
@@ -162,10 +168,8 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                 }
 
                 if (res.result.params.length > 0) {
-                    {
-                        const old_param = res;
-                        registry.register(old_param, 'httpResponse');
-                    }
+                    const old_param = res;
+                    registry.register(old_param, 'httpResponse');
 
                     response.address = currentAccount.address;
                     response.params = [];
@@ -174,15 +178,13 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                         response.params.push("");
                     }
 
-                    console.log(res.result.params);
                     for (var index = 1; index <= res.result.params.length; ++index) {
                         alert("Starting contribution to circuit #" + index.toString());
                         const startingTime = (new Date()).getTime();
                         const [new_param, hash] = await runSNARKJS(fromB64(res.result.params[index - 1]), "Circuit#" + index.toString() + ": " + entropy)
                         const endingTime = (new Date()).getTime();
                         alert("The time it takes to contribute for circuit #" + index + " is " + ((endingTime - startingTime) / 1000.).toString() + "s");
-                        response.params[index - 1] = new_param;
-                        console.log(hash);
+                        new_params.push(new_param);
                         hashes.push(Buffer.from(hash).toString('hex'));
                     }
 
@@ -191,6 +193,7 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                     setList.setListContribution = setListContribution;
                     setState.setUserState = setUserState;
                     res = null;
+                    alert("Waiting for garbage collection and proceed to submit contribution");
                     break;
                 }
             } else {
@@ -199,6 +202,6 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                 break;
             }
         }
-        sleep(refreshTime);
+        await sleep(refreshTime);
     }
 }

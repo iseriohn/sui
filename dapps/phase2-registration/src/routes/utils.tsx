@@ -82,10 +82,7 @@ export async function fetchCall(data) {
 // }
 
 export async function generateSignature(signMessage, msg) {
-    // let bytes = new TextEncoder().encode(msg);
-    // const serialized_msg = bcs.ser(['vector', 'u8'], bytes).toBytes();
     const serialized_msg = new TextEncoder().encode(msg);
-    console.log(serialized_msg);
     let sig = await signMessage({ message: serialized_msg });
     return sig;
 }

@@ -1,3 +1,5 @@
 export const refreshTime = 20 * 1000; // Refresh every MONITOR/4 seconds;
+export const numChunk = 3;
+
 export const URL = 'https://record.sui-phase2-ceremony.iseriohn.com';
 // export const URL = 'http://127.0.0.1:37681';
