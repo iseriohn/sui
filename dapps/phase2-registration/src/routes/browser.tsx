@@ -143,6 +143,11 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
                     break;
                 }
 
+                if (res.result.queue_position <= queueStateRef.current.head) {
+                    console.log("Time out after downloading");
+                    continue;
+                }
+
                 if (queuePositionRef.current.get(currentAccount.address) == null) {
                     alert(currentAccount.address + ": " + "Added in queue #" + res.result.queue_position.toString() + "; wait for " + (res.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
                     setQueuePosition(preState => new Map(preState.set(currentAccount.address, res.result.queue_position)));
