@@ -21,11 +21,11 @@ export function addEphemeralKeyMsg(addr, pk) {
     return "I'll contribute via Docker with address " + addr + " and attestation pk " + pk;
 }
 
-export function downloadScript(fileName, text) {
+export async function downloadScript(fileName, text) {
     var blob = new Blob([text], {
         type: "text/Dockerfile;charset=utf-8;",
     });
-    saveAs(blob, fileName);
+    await saveAs(blob, fileName);
 }
 
 export async function fetchCall(data) {

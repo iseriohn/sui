@@ -41,7 +41,7 @@ export async function contributeViaDocker(repo, currentAccount, entropy, signMes
             text = text + "\nENV OPTION=" + repo;
             text = text + "\nENV ENTROPY=" + toB64(new TextEncoder().encode(entropy));
             text = text + dockerFileBack;
-            downloadScript("Dockerfile", text);
+            await downloadScript("Dockerfile", text);
             alert('Please run "sudo docker build --no-cache --progress=plain ." in the same folder Dockerfile is downloaded.');
             console.log('cargo run --release -p client --features ' + mode + ' ' + addr + ' ' + toB64(ephemeralKey.keypair.secretKey) + ' ' + repo + ' ' + toB64(new TextEncoder().encode(entropy)))
         } else {
