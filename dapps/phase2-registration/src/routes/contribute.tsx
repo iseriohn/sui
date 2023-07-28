@@ -49,15 +49,19 @@ export default function Contribute() {
     const [textEntropy, setTextEntropy] = useState(null);
     const [queueState, setQueueState] = useState(null);
     const [queuePosition, setQueuePosition] = useState(new Map());
+    const [maxPosition, setMaxPosition] = useState(0);
     const [userState, setUserState] = useState(new Map());
     const [listContribution, setListContribution] = useState([]);
 
     const queueStateRef = useRef();
     queueStateRef.current = queueState;
- 
+
     const queuePositionRef = useRef();
     queuePositionRef.current = queuePosition;
 
+    const maxPositionRef = useRef();
+    maxPositionRef.current = maxPosition;
+ 
     if (queueState === null) {
         getQueue(setQueueState);
         setInterval(getQueue, refreshTime, setQueueState);
@@ -71,7 +75,13 @@ export default function Contribute() {
 
             {queueState != null && (
             <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
-                There are currently {queueState.tail - queueState.head} contributors in the queue.
+                There are currently {Math.max(queueState.tail, maxPosition) - queueState.head} contributors in the queue.
+            </h3>
+            )}
+
+            {currentAccount && userState.get(currentAccount.address) === 1 && queueState != null && queuePosition.get(currentAccount.address) != null && (
+            <h3 className="scroll-m-20 text-4xl tracking-tight lg:text-5xl">
+                You are now in queue! There are {Math.max(0, queuePosition.get(currentAccount.address) - queueState.head - 1)} contributors in front of you.
             </h3>
             )}
 
@@ -133,22 +143,12 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, textEntropy, queueStateRef, queuePositionRef, setQueuePosition, setUserState, setListContribution) } >
+                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, textEntropy, queueStateRef, queuePositionRef, setQueuePosition, setMaxPosition, setUserState, setListContribution) } >
                             Contribute in browser with snarkjs
                         </Button>
                     </div>
                 </div>
             </Tabs>
-
-            {/* <Tabs className="w-full">
-                <div className="flex flex-col items-start gap-4">
-                    <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeViaDocker("snarkjs", currentAccount, textEntropy, signMessage, setUserState) } >
-                            Contribute in docker with snarkjs
-                        </Button>
-                    </div>
-                </div>
-            </Tabs> */}
 
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">

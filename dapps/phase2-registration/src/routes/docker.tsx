@@ -1,6 +1,7 @@
 import { mode } from "./config";
 import { addEphemeralKeyMsg, generateSignature, fetchCall } from "./utils";
-import { Ed25519Keypair, toB64 } from '@mysten/sui.js';
+import { Ed25519Keypair } from '@mysten/sui.js';
+import { toB64 } from './utils';
 
 const dockerFileFront =
     "# Use a base image with Rust slim \nFROM rust:slim AS base \n# Install system dependencies \nSHELL [\"/bin/bash\", \"-c\"] \nRUN apt-get update -y && apt-get upgrade -y && apt-get install -y sudo wget unzip curl git build-essential clang"

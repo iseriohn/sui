@@ -8,8 +8,7 @@ export async function getQueue(setQueueState) {
     });
 
     const [http, res] = await fetchCall(msg);
-    if (http) {
-        console.log(res.result);
+    if (http && res.hasOwnProperty("result")) {
         setQueueState(res.result);
     }
 }
