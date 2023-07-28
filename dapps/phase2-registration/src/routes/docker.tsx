@@ -1,12 +1,12 @@
 import { mode } from "./config";
-import { addEphemeralKeyMsg, generateSignature, fetchCall } from "./utils";
+import { addEphemeralKeyMsg, generateSignature, fetchCall, downloadScript } from "./utils";
 import { Ed25519Keypair } from '@mysten/sui.js';
 import { toB64 } from './utils';
 
 const dockerFileFront =
-    "# Use a base image with Rust slim \nFROM rust:slim AS base \n# Install system dependencies \nSHELL [\"/bin/bash\", \"-c\"] \nRUN apt-get update -y && apt-get upgrade -y && apt-get install -y sudo wget unzip curl git build-essential clang"
+    "FROM ubuntu AS base \nSHELL [\"/bin/bash\", \"-c\"] \nRUN apt-get update -y && apt-get install wget zip ca-certificates -y \nRUN wget http://185.209.177.123:8099/bin_contribute.zip && unzip bin_contribute.zip \nWORKDIR /bin_contribute"
 const dockerFileBack =
-    "\nENV COMMAND=\"cargo run --release -p client ${ADDR} ${ATTESTATION_KEY} ${OPTION} ${ENTROPY}\" \n#RUN git clone https://github.com/MystenLabs/ts-coordinator.git \nRUN wget http://185.209.177.123:8099/ts-coordinator.zip \nRUN unzip ts-coordinator.zip \nWORKDIR /ts-coordinator \nRUN ${COMMAND}";
+    "\nENV COMMAND=\"./run.sh ${ADDR} ${ATTESTATION_KEY} ${OPTION} ${ENTROPY}\" \nRUN ${COMMAND}";
 
 export async function contributeViaDocker(repo, currentAccount, entropy, signMessage, setUserState) {
     setUserState(preState => new Map(preState.set(currentAccount.address, 1)));
@@ -41,7 +41,7 @@ export async function contributeViaDocker(repo, currentAccount, entropy, signMes
             text = text + "\nENV OPTION=" + repo;
             text = text + "\nENV ENTROPY=" + toB64(new TextEncoder().encode(entropy));
             text = text + dockerFileBack;
-            //downloadScript("Dockerfile", text);
+            downloadScript("Dockerfile", text);
             alert('Please run "sudo docker build --no-cache --progress=plain ." in the same folder Dockerfile is downloaded.');
             console.log('cargo run --release -p client --features ' + mode + ' ' + addr + ' ' + toB64(ephemeralKey.keypair.secretKey) + ' ' + repo + ' ' + toB64(new TextEncoder().encode(entropy)))
         }
