@@ -34,7 +34,7 @@ export async function contributeViaDocker(repo, currentAccount, entropy, signMes
 
     const [http, res] = await fetchCall(msg);
     if (http) {
-        alert(JSON.stringify(res));
+        console.log(JSON.stringify(res));
         if (res.hasOwnProperty("result")) {
             var text = dockerFileFront + "\nENV ADDR=" + addr;
             text = text + "\nENV ATTESTATION_KEY=" + toB64(ephemeralKey.keypair.secretKey);
@@ -44,6 +44,8 @@ export async function contributeViaDocker(repo, currentAccount, entropy, signMes
             downloadScript("Dockerfile", text);
             alert('Please run "sudo docker build --no-cache --progress=plain ." in the same folder Dockerfile is downloaded.');
             console.log('cargo run --release -p client --features ' + mode + ' ' + addr + ' ' + toB64(ephemeralKey.keypair.secretKey) + ' ' + repo + ' ' + toB64(new TextEncoder().encode(entropy)))
+        } else {
+            alert(JSON.stringify(res));
         }
     } else {
         alert("Error occurred, please try again");
