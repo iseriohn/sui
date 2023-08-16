@@ -1,5 +1,5 @@
 import { mode } from "./config";
-import { addEphemeralKeyMsg, generateSignature, fetchCall, downloadScript } from "./utils";
+import { generateSignature, fetchCall, downloadScript } from "./utils";
 import { Ed25519Keypair } from '@mysten/sui.js';
 import { toB64 } from './utils';
 
@@ -8,7 +8,7 @@ const dockerFileFront =
 const dockerFileBack =
     "\nENV COMMAND=\"./run.sh ${ADDR} ${ATTESTATION_KEY} ${OPTION} ${ENTROPY}\" \nRUN ${COMMAND}";
 
-export async function contributeViaDocker(repo, currentAccount, entropy, signMessage, setUserState) {
+export async function contributeViaDocker(repo, currentAccount, entropy, setUserState) {
     setUserState(preState => new Map(preState.set(currentAccount.address, 1)));
     var addr = currentAccount.address;
     var ephemeralKey = Ed25519Keypair.generate();

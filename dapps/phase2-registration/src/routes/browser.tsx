@@ -1,19 +1,20 @@
 import * as snarkjs from 'snarkjs';
 import * as ffjavascript from 'ffjavascript';
 import { fromB64 } from '@mysten/sui.js';
-import { joinQueueMsg, contributeMsg, fetchCall, generateSignature, sleep, toB64 } from './utils';
+import { joinQueueMsg, contributeMsg, fetchCall, generateSignature, sleep, toB64, getActivationPk, signByActivationCode } from './utils';
 import { numChunk, refreshTime } from './config';
 import { Buffer } from 'buffer';
 
-async function submitInChunks(currentAccount, signMessage, response, new_params, hashes, setListContribution) {
-    var toSignRep = contributeMsg(currentAccount.address, hashes);
-    console.log("toSign", toSignRep);
-    var sigRep = await generateSignature(signMessage, toSignRep);
+async function submitInChunks(activationCode, response, new_params, hashes) {
+    const pk = await getActivationPk(activationCode);
+    const toSign = contributeMsg(pk, hashes, "browser");
+    console.log(toSign);
+    const sig = await signByActivationCode(activationCode, toSign);
 
-    response.msg = toSignRep;
-    response.sig = sigRep.signature;
+    response.msg = toSign;
+    response.sig = sig;
 
-    alert("Now submitting contributions and waiting for verification...");
+    console.log("Now submitting contributions and waiting for verification...");
 
     for (var chunk_num = 0; chunk_num < numChunk; ++chunk_num) {
         response.params = [];
@@ -36,7 +37,7 @@ async function submitInChunks(currentAccount, signMessage, response, new_params,
         const [httpContribute, resContribute] = await fetchCall(msgContribute);
         if (httpContribute) {
             if (resContribute.hasOwnProperty("error")) {
-                alert(currentAccount.address + ": " + JSON.stringify(resContribute));
+                alert(pk + ": " + JSON.stringify(resContribute));
                 break;
             }
         } else {
@@ -44,16 +45,7 @@ async function submitInChunks(currentAccount, signMessage, response, new_params,
             break;
         }
         if (chunk_num == numChunk - 1) {
-            const contribution = {
-                "index": resContribute.result.index,
-                "address": currentAccount.address,
-                "pk": toB64(currentAccount.publicKey),
-                "hash": hashes,
-                "sig": sigRep.signature,
-            }
-
-            setListContribution((listContribution: any) => [...listContribution, contribution]);
-            alert(currentAccount.address + ": " + "Successfully recorded #" + contribution.index + " contribution");
+            alert(pk + ": " + "Successfully recorded #" + resContribute.result.index + " contribution");
         }
     }
 }
@@ -68,18 +60,17 @@ async function runSNARKJS(params, entropy) {
     return [newParams.data, contributionHash];
 }
 
-export async function contributeInBrowser(currentAccount, signMessage, entropy, queueStateRef, queuePositionRef, setQueuePosition, setMaxPosition, setUserState, setListContribution) {
-    setUserState(preState => new Map(preState.set(currentAccount.address, 1)));
-    var addr = currentAccount.address;
-    var pk = toB64(currentAccount.publicKey);
-    var toSign = joinQueueMsg(addr, pk);
-    console.log(toSign);
-    var sig = await generateSignature(signMessage, toSign);
+export async function contributeInBrowser(activationCode, entropy, queueStateRef, queuePositionRef, setQueuePosition, setMaxPosition, setUserState) {
+    setUserState(preState => new Map(preState.set(activationCode, 1)));
+    const pk = await getActivationPk(activationCode);
+    const toSign = joinQueueMsg(pk);
+    const sig = await signByActivationCode(activationCode, toSign);
 
     const joinQueueParams = {
-        "address": addr,
-        "sig": sig.signature,
+        "pk": pk,
+        "sig": sig,
     };
+    console.log(joinQueueParams);
 
     const joinQueueQuery = JSON.stringify({
         jsonrpc: '2.0',
@@ -96,39 +87,41 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
     });
 
     var http, res, new_params, hashes;
-    const contributionParams = { address: currentAccount.address };
+    const contributionParams = { pk: pk, method: "browser" };
     while (true) {
-        if (queuePositionRef.current.get(currentAccount.address) == null || queueStateRef.current.head + 1 >= queuePositionRef.current.get(currentAccount.address)) {
+        if (queuePositionRef.current.get(activationCode) == null || queueStateRef.current.head + 1 >= queuePositionRef.current.get(activationCode)) {
             [http, res] = await fetchCall(joinQueueQuery);
             if (http) {
                 if (res.hasOwnProperty("error")) {
-                    alert(currentAccount.address + ": " + JSON.stringify(res));
+                    alert(pk + ": " + JSON.stringify(res));
                     break;
                 }
+                console.log(res);
 
                 if (res.result.queue_position <= queueStateRef.current.head) {
-                    console.log("Time out after downloading");
+                    console.log(pk + ": " + "Time out after downloading");
+                    await sleep(refreshTime / 2);
                     continue;
                 }
 
-                if (queuePositionRef.current.get(currentAccount.address) == null) {
-                    console.log(currentAccount.address + ": " + "Added in queue #" + res.result.queue_position.toString() + "; wait for " + (res.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
-                } else if (res.result.queue_position != queuePositionRef.current.get(currentAccount.address)) {
-                    console.log(currentAccount.address + ": " + "Missed slot #" + queuePositionRef.current.get(currentAccount.address).toString() + "; assigned new slot #" + res.result.queue_position.toString() + "; wait for " + (res.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
+                if (queuePositionRef.current.get(activationCode) == null) {
+                    console.log(pk + ": " + "Added in queue #" + res.result.queue_position.toString() + "; wait for " + (res.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
+                } else if (res.result.queue_position != queuePositionRef.current.get(activationCode)) {
+                    console.log(pk + ": " + "Missed slot #" + queuePositionRef.current.get(activationCode).toString() + "; assigned new slot #" + res.result.queue_position.toString() + "; wait for " + (res.result.queue_position - queueStateRef.current.head - 1).toString() + " contributors to finish");
                 }
-                setQueuePosition(preState => new Map(preState.set(currentAccount.address, res.result.queue_position)));
+                setQueuePosition(preState => new Map(preState.set(activationCode, res.result.queue_position)));
                 setMaxPosition(preState => Math.max(preState, res.result.queue_position));
 
                 if (res.result.queue_position == queueStateRef.current.head + 1) {
                     var [getParamsHttp, getParamsRes] = await fetchCall(getParamsQuery);
                     if (getParamsHttp) {
                         if (getParamsRes.hasOwnProperty("error")) {
-                            alert(currentAccount.address + ": " + JSON.stringify(res));
+                            alert(pk + ": " + JSON.stringify(res));
                             break;
                         }
                                
                         if (getParamsRes.result.params.length == 0) {
-                            console.log("Not in queue yet or timed out.");
+                            console.log("Not in queue yet or timed out. Will retry...");
                             continue;
                         } else {
                             new_params = [];
@@ -146,7 +139,7 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
 
                             res = null;
                             getParamsRes = null;
-                            await submitInChunks(currentAccount, signMessage, contributionParams, new_params, hashes, setListContribution);
+                            await submitInChunks(activationCode, contributionParams, new_params, hashes);
                             break;
                         }
                     } else {
@@ -161,5 +154,5 @@ export async function contributeInBrowser(currentAccount, signMessage, entropy, 
         }
         await sleep(refreshTime);
     }
-    setUserState(preState => new Map(preState.set(currentAccount.address, null)));
+    setUserState(preState => new Map(preState.set(activationCode, null)));
 }

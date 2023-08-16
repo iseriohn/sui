@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import Register from './register';
 import Contribute from './contribute';
 import { Root } from './root';
 
@@ -13,11 +12,7 @@ export const router = createBrowserRouter([
 		children: [
 			{
 				path: '/',
-				element: <Navigate to="register" replace />,
-			},
-			{
-				path: 'register',
-				element: <Register />,
+				element: <Navigate to="contribute" replace />,
 			},
 			{
 				path: 'contribute',

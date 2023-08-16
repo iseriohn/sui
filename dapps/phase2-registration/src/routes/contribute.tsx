@@ -13,7 +13,7 @@ import { refreshTime } from './config';
 import { contributeInBrowser } from './browser';
 import { contributeViaDocker } from './docker';
 import { getQueue } from './queue';
-import { addEntropy } from './entropy';
+import { UpdateWallet, addActivationCode, addEntropy } from './activation';
 
 function Contribution({ contribution }) {
     console.log(contribution);
@@ -46,12 +46,16 @@ function Contribution({ contribution }) {
 
 export default function Contribute() {
     const { currentAccount, signMessage } = useWalletKit();
+    const [activationCode, setActivationCode] = useState(null);
     const [textEntropy, setTextEntropy] = useState(null);
     const [queueState, setQueueState] = useState(null);
     const [queuePosition, setQueuePosition] = useState(new Map());
     const [maxPosition, setMaxPosition] = useState(0);
     const [userState, setUserState] = useState(new Map());
-    const [listContribution, setListContribution] = useState([]);
+    const [listContribution, setListContribution] = useState(new Map());
+
+    const activationCodeRef = useRef();
+    activationCodeRef.current = activationCode;
 
     const queueStateRef = useRef();
     queueStateRef.current = queueState;
@@ -63,8 +67,8 @@ export default function Contribute() {
     maxPositionRef.current = maxPosition;
  
     if (queueState === null) {
-        getQueue(setQueueState);
-        setInterval(getQueue, refreshTime, setQueueState);
+        getQueue(setQueueState, activationCodeRef, setListContribution);
+        setInterval(getQueue, refreshTime, setQueueState, activationCodeRef, setListContribution);
     }
     
     return (
@@ -85,7 +89,7 @@ export default function Contribute() {
             </h3>
             )}
 
-            {!currentAccount && (
+            {/* {!currentAccount && (
                 <Alert>
                     <Terminal className="h-4 w-4" />
                     <AlertTitle>Wallet Required</AlertTitle>
@@ -99,6 +103,36 @@ export default function Contribute() {
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
                         <ConnectWallet />
+                    </div>
+                </div>
+            </Tabs> */}
+            
+            {activationCode == null && (
+                <Alert>
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Activation code</AlertTitle>
+                    <AlertDescription>
+                        Please enter your activation code first.
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            <Tabs className="w-full">
+                <div className="flex flex-col items-start gap-4">
+                    <div className="flex gap-4">
+                        <Button disabled={activationCode != null && userState.get(activationCode) === 1} onClick={async () => await addActivationCode(setActivationCode)} >
+                            Add activation code
+                        </Button>
+                    </div>
+                </div>
+            </Tabs>
+
+            <Tabs className="w-full">
+                <div className="flex flex-col items-start gap-4">
+                    <div className="flex gap-4">
+                        <Button disabled={activationCode == null} onClick={async () => await UpdateWallet(activationCode)} >
+                            Update Sui Wallet
+                        </Button>
                     </div>
                 </div>
             </Tabs>
@@ -127,7 +161,7 @@ export default function Contribute() {
                 Contribute by one of the following options (Please use WiFi):
             </h3>
 
-            {currentAccount && userState.get(currentAccount.address) === 1 && (
+            {activationCode && userState.get(activationCode) === 1 && (
                 <Alert>
                     <Terminal className="h-4 w-4" />
                     <AlertTitle>Contribution warning</AlertTitle>
@@ -143,7 +177,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeInBrowser(currentAccount, signMessage, textEntropy, queueStateRef, queuePositionRef, setQueuePosition, setMaxPosition, setUserState, setListContribution) } >
+                        <Button disabled={!activationCode || userState.get(activationCode) === 1 || textEntropy == null} onClick={ async () => await contributeInBrowser(activationCode, textEntropy, queueStateRef, queuePositionRef, setQueuePosition, setMaxPosition, setUserState) } >
                             Contribute in browser with snarkjs
                         </Button>
                     </div>
@@ -153,7 +187,7 @@ export default function Contribute() {
             <Tabs className="w-full">
                 <div className="flex flex-col items-start gap-4">
                     <div className="flex gap-4">
-                        <Button disabled={!currentAccount || userState.get(currentAccount.address) === 1 || textEntropy == null} onClick={ async () => await contributeViaDocker("kobi", currentAccount, textEntropy, signMessage, setUserState) } >
+                        <Button disabled={!activationCode || userState.get(activationCode) === 1 || textEntropy == null} onClick={ async () => await contributeViaDocker("kobi", activationCode, textEntropy, setUserState) } >
                             Contribute in docker with Kobi's phase2-bn254
                         </Button>
                     </div>
@@ -162,7 +196,7 @@ export default function Contribute() {
 
             <Tabs className="w-full">
                 {<div className="flex flex-col gap-6 mt-6">
-                    {listContribution.map((contribution) => (
+                    {Array.from(listContribution.values()).map((contribution) => (
                         <Contribution contribution={contribution} />
                     ))}
                 </div>}

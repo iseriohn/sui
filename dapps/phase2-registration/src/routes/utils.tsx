@@ -1,24 +1,26 @@
 import { saveAs } from 'file-saver';
 import { URL } from './config';
+import { Keypair } from '@mysten/sui.js';
+import { fromExportedKeypair } from '@mysten/sui.js';
 
-export function registrationMsg(addr) {
-    return "I register to contribute to Phase2 Ceremony with address " + addr;
+export function getContributorMsg(pk) {
+    return "Fetch status of contributor with activation key " + pk;
 }
 
-export function joinQueueMsg(addr, pk) {
-    return "I join the contribution queue with address " + addr + " and attestation pk " + pk;
+export function updateWalletMsg(pk, addr) {
+    return "Link contribution by activation pk " + pk + " to sui address " + addr;
 }
 
-export function contributeMsg(addr, params) {
-    var msg = "I contribute with address " + addr;
+export function joinQueueMsg(pk) {
+    return "Join the contribution queue with activation pk " + pk;
+}
+
+export function contributeMsg(pk, params, method) {
+    var msg = "Contribute in " + method + " with activation pk " + pk;
     for (const [index, param] of params.entries()) {
         msg = msg + ' #' + (index + 1).toString() + ' contribution hash: "' + param + '"';
     }
     return msg;
-}
-
-export function addEphemeralKeyMsg(addr, pk) {
-    return "I'll contribute via Docker with address " + addr + " and attestation pk " + pk;
 }
 
 export async function downloadScript(fileName, text) {
@@ -55,7 +57,28 @@ export async function fetchCall(data) {
 export async function generateSignature(signMessage, msg) {
     const serialized_msg = new TextEncoder().encode(msg);
     let sig = await signMessage({ message: serialized_msg });
+    console.log(sig);
     return sig;
+}
+
+export async function getActivationPk(sk) {
+    const exportedKeyPair = {
+        "privateKey": sk,
+        "schema": "ED25519"
+    }
+    const keyPair = fromExportedKeypair(exportedKeyPair);
+    return keyPair.getPublicKey().toBase64();
+}
+
+export async function signByActivationCode(sk, msg) {
+    const serialized_msg = new TextEncoder().encode(msg);
+    const exportedKeyPair = {
+        "privateKey": sk,
+        "schema": "ED25519"
+    }
+    const keyPair = fromExportedKeypair(exportedKeyPair);
+    let sig = await keyPair.signPersonalMessage(serialized_msg);
+    return sig.signature;
 }
 
 export function sleep(ms) {

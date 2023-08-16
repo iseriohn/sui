@@ -5,7 +5,6 @@ import { KeyRound } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const links = [
-	{ to: '/register', label: 'Register' },
 	{ to: '/contribute', label: 'Contribute' },
 ];
 
